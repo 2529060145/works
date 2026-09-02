@@ -38,23 +38,31 @@ onMounted(async()=>{
 <style scoped lang="scss">
 .app-shell {
   display: flex;
+  height: 100vh;
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   background: var(--bg-page);
 }
 
 .app-main {
   display: flex;
+  height: 100vh;
   min-width: 0;
+  min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-content {
   min-width: 0;
+  min-height: 0;
   flex: 1;
   padding: 24px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
 }
 
 @media (max-width: 960px) {

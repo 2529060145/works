@@ -35,5 +35,13 @@
 }
 
 .el-dialog {
+  display: flex;
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
   border-radius: var(--radius-large);
+}
+
+.el-dialog__body {
+  min-height: 0;
+  overflow-y: auto;
 }

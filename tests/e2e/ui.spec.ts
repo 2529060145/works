@@ -68,3 +68,23 @@ test('desktop layouts do not overflow horizontally', async ({ page }) => {
     }
   }
 })
+
+test('page content and long dialogs scroll vertically', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/dashboard')
+  const content = page.locator('.app-content')
+  expect(await content.evaluate(element => element.scrollHeight)).toBeGreaterThan(
+    await content.evaluate(element => element.clientHeight),
+  )
+  await content.evaluate(element => { element.scrollTop = element.scrollHeight })
+  expect(await content.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+
+  await page.goto('/jobs')
+  await page.getByRole('button', { name: '新增岗位' }).click()
+  const dialogBody = page.locator('.el-dialog__body')
+  expect(await dialogBody.evaluate(element => element.scrollHeight)).toBeGreaterThan(
+    await dialogBody.evaluate(element => element.clientHeight),
+  )
+  await dialogBody.evaluate(element => { element.scrollTop = element.scrollHeight })
+  expect(await dialogBody.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+})

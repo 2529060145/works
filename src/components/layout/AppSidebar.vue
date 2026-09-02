@@ -82,8 +82,10 @@ function navigate(path: string) {
 .sidebar {
   display: flex;
   width: 210px;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
   flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid var(--border-color);
   background: var(--bg-card);
   transition: width 180ms ease;
@@ -142,6 +144,7 @@ function navigate(path: string) {
 }
 
 .nav-scroll {
+  min-height: 0;
   flex: 1;
 }
 

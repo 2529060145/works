@@ -1,14 +1,15 @@
 import * as XLSX from 'xlsx'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { readFile, writeFile } from '@tauri-apps/plugin-fs'
-import type { ApplicationStage } from '../types/application'
-import { applicationStageLabels } from '../constants/status'
+import type { ApplicationResult, ApplicationStage } from '../types/application'
+import { applicationResultLabels, applicationStageLabels } from '../constants/status'
 import { listCompanies, saveCompany } from './companyService'
 import { execute, select } from './databaseService'
+import { excelText as text, parseExcelRows } from './excelImportParser'
 import { saveJob } from './jobService'
 
 const stageByLabel = Object.fromEntries(Object.entries(applicationStageLabels).map(([key,value])=>[value,key])) as Record<string,ApplicationStage>
-const text=(row:Record<string,unknown>,...keys:string[])=>{for(const key of keys){const value=row[key];if(value!==undefined&&value!==null&&String(value).trim())return String(value).trim()}return ''}
+const resultByLabel = Object.fromEntries(Object.entries(applicationResultLabels).map(([key,value])=>[value,key])) as Record<string,ApplicationResult>
 const numberValue=(value:string)=>value&&Number.isFinite(Number(value))?Number(value):undefined
 
 export interface ImportReport { fileName:string; rows:number; companiesCreated:number; jobsCreated:number; applicationsUpdated:number; skipped:number; errors:string[] }
@@ -18,28 +19,39 @@ export async function importExcel():Promise<ImportReport|null>{
   if(!selected||Array.isArray(selected))return null
   const workbook=XLSX.read(await readFile(selected),{type:'array',cellDates:true})
   const sheet=workbook.Sheets[workbook.SheetNames[0]]
-  const rows=XLSX.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:''})
+  const rows=parseExcelRows(sheet)
   const report:ImportReport={fileName:selected.split(/[\\/]/).pop()??selected,rows:rows.length,companiesCreated:0,jobsCreated:0,applicationsUpdated:0,skipped:0,errors:[]}
   const companies=await listCompanies()
   const companyMap=new Map(companies.map(i=>[i.companyName.trim().toLowerCase(),i.id]))
   const existingJobs=await select<{id:number;companyId:number;jobName:string;location:string}>('SELECT id,company_id AS "companyId",job_name AS "jobName",COALESCE(location,\'\') AS location FROM jobs')
-  const jobKeys=new Set(existingJobs.map(i=>`${i.companyId}|${i.jobName.toLowerCase()}|${i.location.toLowerCase()}`))
-  for(const [index,row] of rows.entries()){
+  const jobMap=new Map(existingJobs.map(i=>[`${i.companyId}|${i.jobName.toLowerCase()}|${i.location.toLowerCase()}`,i.id]))
+  let previousCompanyName=''
+  for(const {rowNumber,values:row} of rows){
     try{
-      const companyName=text(row,'企业名称','公司名称','企业','companyName')
-      const jobName=text(row,'岗位名称','职位名称','岗位','jobName')
-      if(!companyName||!jobName){report.skipped++;report.errors.push(`第 ${index+2} 行：企业名称或岗位名称为空`);continue}
+      const currentCompanyName=text(row,'企业名称','公司名称','企业','companyName')
+      if(currentCompanyName)previousCompanyName=currentCompanyName
+      const companyName=currentCompanyName||previousCompanyName||'未填写企业'
+      const jobName=text(row,'岗位名称','职位名称','岗位','投递岗位','jobName')
+      if(!jobName){report.skipped++;report.errors.push(`第 ${rowNumber} 行：岗位名称为空，已跳过`);continue}
       let companyId=companyMap.get(companyName.toLowerCase())
       if(!companyId){companyId=Number(await saveCompany({companyName,companyType:text(row,'企业性质','公司性质'),headquarters:text(row,'总部','总部所在地'),recruitmentBatch:text(row,'招聘批次'),officialWebsite:text(row,'官方网站'),recruitmentWebsite:text(row,'招聘网站'),description:'',notes:text(row,'企业备注')}));companyMap.set(companyName.toLowerCase(),companyId);report.companiesCreated++}
       const location=text(row,'工作地点','地点','location')
       const jobKey=`${companyId}|${jobName.toLowerCase()}|${location.toLowerCase()}`
-      if(jobKeys.has(jobKey)){report.skipped++;continue}
-      const jobId=Number(await saveJob({companyId,jobName,location,recruitmentBatch:text(row,'招聘批次'),salaryText:text(row,'薪资','薪资原文'),salaryMin:numberValue(text(row,'最低薪资')),salaryMax:numberValue(text(row,'最高薪资')),salaryMonths:numberValue(text(row,'薪资月数')),education:text(row,'学历要求'),majorRequirement:text(row,'专业要求'),jobRequirement:text(row,'岗位要求'),recruitmentCount:numberValue(text(row,'招聘人数'))??0,publishDate:text(row,'发布日期'),deadline:text(row,'截止日期'),jobUrl:text(row,'招聘链接','岗位链接'),notes:text(row,'岗位备注','备注')}))
-      jobKeys.add(jobKey);report.jobsCreated++
+      let jobId=jobMap.get(jobKey)
+      if(!jobId){jobId=Number(await saveJob({companyId,jobName,location,recruitmentBatch:text(row,'招聘批次'),salaryText:text(row,'薪资','薪资原文'),salaryMin:numberValue(text(row,'最低薪资')),salaryMax:numberValue(text(row,'最高薪资')),salaryMonths:numberValue(text(row,'薪资月数')),education:text(row,'学历要求'),majorRequirement:text(row,'专业要求'),jobRequirement:text(row,'岗位要求'),recruitmentCount:numberValue(text(row,'招聘人数'))??0,publishDate:text(row,'发布日期'),deadline:text(row,'截止日期'),jobUrl:text(row,'招聘链接','岗位链接','网址链接'),notes:text(row,'岗位备注','备注')}));jobMap.set(jobKey,jobId);report.jobsCreated++}
+      else report.skipped++
       const stageText=text(row,'投递阶段','状态','stage')
-      const stage=(stageByLabel[stageText]??(stageText in applicationStageLabels?stageText:'TO_APPLY')) as ApplicationStage
-      if(stage!=='TO_APPLY'||text(row,'投递日期')){await execute('UPDATE applications SET stage=?,application_date=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?',[stage,text(row,'投递日期')||null,jobId]);report.applicationsUpdated++}
-    }catch(error){report.skipped++;report.errors.push(`第 ${index+2} 行：${error instanceof Error?error.message:'导入失败'}`)}
+      const deliveryText=text(row,'是否已经投递简历','是否投递')
+      const resultText=text(row,'投递结果','结果')
+      const result=(resultByLabel[resultText]??(resultText in applicationResultLabels?resultText:'PENDING')) as ApplicationResult
+      let stage=(stageByLabel[stageText]??(stageText in applicationStageLabels?stageText:deliveryText==='已投递'?'APPLIED':'TO_APPLY')) as ApplicationStage
+      if(result==='OFFER')stage='OFFER'
+      else if(result==='UNSUITABLE')stage='UNSUITABLE'
+      else if(result==='FAILED')stage='REJECTED'
+      else if(result==='WITHDRAWN')stage='WITHDRAWN'
+      const applicationDate=text(row,'投递日期','企业投递日期')
+      if(stage!=='TO_APPLY'||applicationDate||result!=='PENDING'){await execute('UPDATE applications SET stage=?,application_date=?,result=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?',[stage,applicationDate||null,result,jobId]);report.applicationsUpdated++}
+    }catch(error){report.skipped++;report.errors.push(`第 ${rowNumber} 行：${error instanceof Error?error.message:'导入失败'}`)}
   }
   return report
 }
