@@ -7,8 +7,6 @@
   ],
   "permissions": [
     "core:default",
-    "sql:default",
-    "sql:allow-execute",
     "dialog:default",
     "fs:allow-copy-file",
     "fs:allow-exists",

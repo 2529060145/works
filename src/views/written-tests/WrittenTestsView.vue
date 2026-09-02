@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Plus } from '@element-plus/icons-vue'
+import { Delete, Edit, Link, Plus } from '@element-plus/icons-vue'
 import AppCard from '../../components/common/AppCard.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
 import PageHeader from '../../components/common/PageHeader.vue'
@@ -10,6 +10,7 @@ import WrittenTestDialog from '../../dialogs/WrittenTestDialog.vue'
 import type { WrittenTest } from '../../types/writtenTest'
 import { deleteWrittenTest, listWrittenTests } from '../../services/writtenTestService'
 import { isTauriRuntime } from '../../services/databaseService'
+import { isWebLink, openWebLink } from '../../utils/link'
 
 const rows=ref<WrittenTest[]>([]), loading=ref(false)
 const dialog=ref<InstanceType<typeof WrittenTestDialog>>()
@@ -26,7 +27,7 @@ onMounted(load)
   <AppCard class="data-card"><el-table v-if="rows.length" v-loading="loading" :data="rows" stripe>
     <el-table-column prop="companyName" label="企业" min-width="180"/><el-table-column prop="jobName" label="岗位" min-width="180"/><el-table-column prop="scheduledAt" label="笔试时间" width="170"/>
     <el-table-column label="形式" width="90"><template #default="scope">{{ formLabels[scope.row.form as keyof typeof formLabels] }}</template></el-table-column>
-    <el-table-column prop="location" label="地点 / 链接" min-width="150" show-overflow-tooltip/>
+    <el-table-column prop="location" label="地点 / 链接" min-width="170" show-overflow-tooltip><template #default="scope"><span>{{ scope.row.location||'未填写' }}</span><el-button v-if="isWebLink(scope.row.location)" :icon="Link" link type="primary" title="打开链接" @click="openWebLink(scope.row.location)"/></template></el-table-column>
     <el-table-column label="状态" width="100"><template #default="scope"><StatusTag :type="scope.row.status==='WAITING'?'warning':scope.row.status==='COMPLETED'?'success':'info'">{{ statusLabels[scope.row.status as keyof typeof statusLabels] }}</StatusTag></template></el-table-column>
     <el-table-column label="结果" width="90"><template #default="scope">{{ resultLabels[scope.row.result as keyof typeof resultLabels] }}</template></el-table-column>
     <el-table-column label="操作" width="110"><template #default="scope"><el-button :icon="Edit" link @click="dialog?.open(scope.row)"/><el-button :icon="Delete" link type="danger" @click="remove(scope.row)"/></template></el-table-column>

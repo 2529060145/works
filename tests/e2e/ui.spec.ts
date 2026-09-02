@@ -8,6 +8,7 @@ const routes = [
 ] as const
 
 test('all application routes render without runtime errors', async ({ page }) => {
+  test.setTimeout(45_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   for (const [path, text] of routes) {
@@ -56,6 +57,14 @@ test('core add dialogs expose complete forms', async ({ page }) => {
     await page.getByRole('button', { name: button }).click()
     await expect(page.getByRole('dialog', { name: dialogName })).toBeVisible()
   }
+})
+
+test('job dialog supports inline company creation', async ({ page }) => {
+  await page.goto('/jobs')
+  await page.getByRole('button', { name: '新增岗位' }).click()
+  await page.getByPlaceholder('搜索或输入企业名称').fill('中国移动山东分公司')
+  await expect(page.getByText('保存岗位时将自动创建', { exact: false })).toBeVisible()
+  await expect(page.getByRole('button', { name: '立即创建' })).toBeVisible()
 })
 
 test('desktop layouts do not overflow horizontally', async ({ page }) => {

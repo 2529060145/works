@@ -21,6 +21,31 @@ export async function getCompany(id: number) {
   return rows[0] ?? null
 }
 
+export async function findCompanyByName(companyName: string) {
+  const rows = await select<Company>(
+    `SELECT ${companyColumns} FROM companies WHERE company_name = ? COLLATE NOCASE LIMIT 1`,
+    [companyName.trim()],
+  )
+  return rows[0] ?? null
+}
+
+export async function ensureCompany(companyName: string) {
+  const normalizedName = companyName.trim()
+  if (!normalizedName) throw new Error('请输入企业名称')
+  const existing = await findCompanyByName(normalizedName)
+  if (existing) return existing
+  try {
+    const id = Number(await saveCompany({ companyName: normalizedName }))
+    const created = await getCompany(id)
+    if (!created) throw new Error('企业创建后读取失败')
+    return created
+  } catch (error) {
+    const concurrent = await findCompanyByName(normalizedName)
+    if (concurrent) return concurrent
+    throw error
+  }
+}
+
 export async function saveCompany(input: CompanyInput, id?: number) {
   const values = [input.companyName.trim(), input.companyType || null, input.officialWebsite || null,
     input.recruitmentWebsite || null, input.recruitmentBatch || null, input.headquarters || null,

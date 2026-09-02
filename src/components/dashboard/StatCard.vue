@@ -1,27 +1,29 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 defineProps<{
   title: string
   value: number | string
   description: string
   tone?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple'
+  icon: Component
 }>()
 </script>
 
 <template>
   <button class="stat-card" :class="tone ?? 'primary'" type="button">
-    <span class="stat-icon" aria-hidden="true"></span>
-    <span class="stat-title">{{ title }}</span>
-    <strong>{{ value }}</strong>
-    <small>{{ description }}</small>
+    <span class="stat-icon" aria-hidden="true"><el-icon><component :is="icon" /></el-icon></span>
+    <span class="stat-copy"><span class="stat-title">{{ title }}</span><strong>{{ value }}</strong><small>{{ description }}</small></span>
   </button>
 </template>
 
 <style scoped lang="scss">
 .stat-card {
-  display: grid;
+  display: flex;
   min-width: 0;
-  gap: 8px;
-  padding: 16px;
+  min-height: 116px;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 17px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-large);
   background: var(--bg-card);
@@ -39,11 +41,18 @@ defineProps<{
 }
 
 .stat-icon {
-  width: 34px;
-  height: 8px;
-  border-radius: 999px;
-  background: currentColor;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 12%, var(--bg-card));
+
+  .el-icon { font-size: 22px; }
 }
+
+.stat-copy { display: grid; min-width: 0; gap: 7px; }
 
 .stat-title {
   color: var(--text-secondary);

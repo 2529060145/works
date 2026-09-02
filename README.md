@@ -10,7 +10,7 @@
 - Tauri 2 + WebView2
 - Element Plus + Pinia + Vue Router
 - Apache ECharts
-- SQLite via `@tauri-apps/plugin-sql`
+- SQLite via Rust `rusqlite`
 - Tauri FS / Dialog / Opener
 - SheetJS `xlsx 0.20.3`
 
@@ -43,7 +43,7 @@ npm run dev
 - 投递：固定阶段、日期、结果、备注和阶段看板。
 - 笔试与面试：新增、编辑、删除、状态、结果和多轮时间轴。
 - 日程与提醒：统一聚合岗位截止、待进行笔试和面试。
-- 附件：复制到应用数据目录、打开和删除。
+- 附件：复制到程序同目录的便携数据目录、打开和删除。
 - Excel：批量导入、企业和岗位去重、中文多工作表导出。
 - 数据：SQLite 备份、文件头校验和恢复。
 - 设置：称呼、浅色/深色主题和本地目录查看。
@@ -54,11 +54,13 @@ npm run dev
 
 SQLite 使用 snake_case，TypeScript 使用 camelCase。所有用户输入均通过参数化 SQL 写入，外键删除级联已开启。
 
-数据库实际保存在 Tauri 的应用配置目录；附件保存在应用数据目录的 `attachments/<岗位ID>/` 下。系统设置页可以查看并打开这两个目录。
+数据库保存在 EXE 所在目录的 `data/job_manager.db`；附件保存在 `data/attachments/<岗位ID>/`。系统设置页可以查看并打开这些目录。程序首次启动时若发现旧版应用配置目录中的数据库，会自动复制旧数据，但新版不会继续向 C 盘应用配置目录写入。
+
+推荐将便携版 EXE 放在 F 盘等非系统盘长期使用。移动程序时，请将 EXE 和旁边的 `data` 文件夹一起移动，否则程序会在新位置创建一套空数据。
 
 ## Excel 导入
 
-读取工作簿第一个 Sheet，必需列为“企业名称”和“岗位名称”。同时兼容“公司名称”“职位名称”等常见别名。岗位按“企业 + 岗位名 + 地点”去重，并在结束后显示导入报告。
+自动识别工作簿第一个 Sheet 中的真实表头行，同时兼容标题、统计说明、多余空行以及“公司名称”“职位名称”等常见别名。合并单元格导致企业名称留空时会继承上一行企业；岗位按“企业 + 岗位名 + 地点”去重，并在结束后显示导入报告。
 
 ## 备份恢复
 
@@ -87,12 +89,14 @@ npm audit --omit=dev
 npm run desktop:build
 ```
 
-成功后产物整理到：
+成功后可获得安装版和便携版。没有本地 C++ 编译环境时，也可以把代码推送到 GitHub，通过项目内置的 GitHub Actions 在云端生成：
 
 ```text
-dist-desktop\求职投递管理.exe
-dist-desktop\bundle\
+求职投递管理_0.1.0_x64-setup.exe
+求职投递管理_0.1.0_便携版.exe
 ```
+
+便携版无需安装，放到目标磁盘后直接双击即可；首次运行会在 EXE 旁创建 `data` 文件夹。
 
 若提示 `link.exe was not found`，请安装 Visual Studio 2022 Build Tools 的 C++ 桌面开发工作负载，重新打开 PowerShell 后再执行打包命令。
 

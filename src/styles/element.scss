@@ -34,6 +34,19 @@
   border-radius: var(--radius-medium);
 }
 
+.el-table th.el-table__cell {
+  height: 46px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-card));
+  font-weight: 700;
+}
+
+.el-table td.el-table__cell { height: 48px; }
+
+.el-table__row:hover > td.el-table__cell {
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-card)) !important;
+}
+
 .el-dialog {
   display: flex;
   max-height: calc(100vh - 48px);

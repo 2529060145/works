@@ -1,8 +1,25 @@
-import Database from '@tauri-apps/plugin-sql'
+import { invoke } from '@tauri-apps/api/core'
 
-export const DATABASE_URL = 'sqlite:job_manager.db'
+export interface ExecuteResult {
+  rowsAffected: number
+  lastInsertId: number
+}
 
-let database: Database | null = null
+interface DatabaseClient {
+  execute(query: string, values?: unknown[]): Promise<ExecuteResult>
+  select<T>(query: string, values?: unknown[]): Promise<T>
+}
+
+export interface PortableDataPaths {
+  dataDirectory: string
+  databasePath: string
+  attachmentDirectory: string
+}
+
+const database: DatabaseClient = {
+  execute: (query, values = []) => invoke('database_execute', { query, values }),
+  select: (query, values = []) => invoke('database_select', { query, values }),
+}
 let initialized = false
 
 const migrations = [
@@ -122,7 +139,6 @@ export function isTauriRuntime() {
 
 export async function initializeDatabase() {
   if (initialized || !isTauriRuntime()) return
-  database = await Database.load(DATABASE_URL)
   await database.execute('PRAGMA foreign_keys = ON')
   for (const statement of migrations) await database.execute(statement)
   await database.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)', [1])
@@ -143,8 +159,12 @@ export async function initializeDatabase() {
 export async function getDatabase() {
   if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中使用数据功能')
   if (!initialized) await initializeDatabase()
-  if (!database) throw new Error('数据库尚未初始化')
   return database
+}
+
+export async function getPortableDataPaths() {
+  if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中查看数据目录')
+  return invoke<PortableDataPaths>('portable_data_paths')
 }
 
 export async function select<T>(query: string, values: unknown[] = []) {

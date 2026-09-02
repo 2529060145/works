@@ -6,6 +6,7 @@ import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/compon
 import { CanvasRenderer } from 'echarts/renderers'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Briefcase, CircleCheck, CircleClose, Document, Medal, Promotion, User } from '@element-plus/icons-vue'
 import AppCard from '../../components/common/AppCard.vue'
 import StatCard from '../../components/dashboard/StatCard.vue'
 import CompanyDialog from '../../dialogs/CompanyDialog.vue'
@@ -31,13 +32,13 @@ const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyC
 const data=ref<DashboardData>({totalJobs:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 let chartInstances:ECharts[]=[]
 const stats=computed(()=>[
-  { title:'岗位总数',value:data.value.totalJobs,description:'全部岗位',tone:'primary' as const },
-  { title:'待投递',value:data.value.stages.TO_APPLY,description:'准备中的机会',tone:'warning' as const },
-  { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'info' as const },
-  { title:'笔试',value:data.value.stages.WRITTEN_TEST,description:'进入笔试流程',tone:'purple' as const },
-  { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'primary' as const },
-  { title:'Offer',value:data.value.stages.OFFER,description:'已收获结果',tone:'success' as const },
-  { title:'淘汰',value:data.value.stages.REJECTED,description:'流程已结束',tone:'danger' as const },
+  { title:'岗位总数',value:data.value.totalJobs,description:'全部岗位',tone:'primary' as const,icon:Briefcase },
+  { title:'待投递',value:data.value.stages.TO_APPLY,description:'准备中的机会',tone:'warning' as const,icon:Promotion },
+  { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'info' as const,icon:CircleCheck },
+  { title:'笔试',value:data.value.stages.WRITTEN_TEST,description:'进入笔试流程',tone:'purple' as const,icon:Document },
+  { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'primary' as const,icon:User },
+  { title:'Offer',value:data.value.stages.OFFER,description:'已收获结果',tone:'success' as const,icon:Medal },
+  { title:'淘汰',value:data.value.stages.REJECTED,description:'流程已结束',tone:'danger' as const,icon:CircleClose },
 ])
 
 function renderCharts(){chartInstances.forEach(i=>i.dispose());chartInstances=[];if(!progressChart.value||!locationChart.value||!companyChart.value)return
@@ -64,7 +65,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
         </div>
         <p class="eyebrow">你好，用户</p>
         <h1>今天是 {{ todayText }}，祝你求职顺利！</h1>
-        <p class="welcome-note">所有数据将保存在本机应用数据目录，关闭软件后仍会永久保留。</p>
+        <p class="welcome-note">所有数据保存在客户端程序旁的 data 文件夹，关闭软件后仍会永久保留。</p>
       </div>
       <div class="work-illustration" aria-hidden="true">
         <div class="mini-window">
@@ -83,6 +84,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
         v-for="item in stats"
         :key="item.title"
         :description="item.description"
+        :icon="item.icon"
         :title="item.title"
         :tone="item.tone"
         :value="item.value"
