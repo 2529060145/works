@@ -1,0 +1,39 @@
+:root {
+  --el-color-primary: var(--primary);
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger: var(--danger);
+  --el-color-info: var(--info);
+  --el-border-radius-base: var(--radius-small);
+  --el-border-color: var(--border-color);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-bg-color-page: var(--bg-page);
+}
+
+.el-button {
+  border-radius: var(--radius-small);
+  font-weight: 600;
+}
+
+.el-button--primary {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  box-shadow: 0 10px 20px rgba(91, 92, 226, 0.18);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: var(--radius-small);
+  box-shadow: 0 0 0 1px var(--border-color) inset;
+}
+
+.el-table {
+  overflow: hidden;
+  border-radius: var(--radius-medium);
+}
+
+.el-dialog {
+  border-radius: var(--radius-large);
+}

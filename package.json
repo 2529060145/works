@@ -1,0 +1,40 @@
+{
+  "name": "job-manager",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "desktop:build": "powershell -ExecutionPolicy Bypass -File scripts/build-desktop.ps1",
+    "test:e2e": "playwright test",
+    "test:schema": "powershell -ExecutionPolicy Bypass -File scripts/test-schema.ps1"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "2.3.2",
+    "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/plugin-dialog": "2.7.3",
+    "@tauri-apps/plugin-fs": "2.5.2",
+    "@tauri-apps/plugin-opener": "2.5.5",
+    "@tauri-apps/plugin-sql": "2.4.1",
+    "echarts": "6.1.0",
+    "element-plus": "2.14.5",
+    "pinia": "2.1.7",
+    "vue": "3.3.13",
+    "vue-router": "4.2.5",
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@tauri-apps/cli": "2.11.4",
+    "@vitejs/plugin-vue": "^4.6.2",
+    "sass": "1.69.7",
+    "typescript": "5.2.2",
+    "vite": "4.5.14",
+    "vue-tsc": "1.8.27"
+  }
+}
