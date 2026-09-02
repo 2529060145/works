@@ -21,6 +21,8 @@ export interface Job {
   updatedAt: string
   stage?: import('./application').ApplicationStage
   applicationDate?: string
+  companyType?: string
+  headquarters?: string
 }
 
-export type JobInput = Omit<Job, 'id' | 'companyName' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate'>
+export type JobInput = Omit<Job, 'id' | 'companyName' | 'companyType' | 'headquarters' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate'>

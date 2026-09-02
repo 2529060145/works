@@ -15,6 +15,8 @@ export interface JobQuery {
   companyId?: number
   stage?: ApplicationStage | ''
   location?: string
+  companyType?: string
+  recruitmentBatch?: string
   page?: number
   pageSize?: number
   sort?: 'updated' | 'deadline' | 'company'
@@ -40,6 +42,14 @@ export async function listJobs(query: JobQuery = {}) {
     clauses.push('j.location LIKE ?')
     values.push(`%${query.location.trim()}%`)
   }
+  if (query.companyType?.trim()) {
+    clauses.push('c.company_type = ?')
+    values.push(query.companyType.trim())
+  }
+  if (query.recruitmentBatch?.trim()) {
+    clauses.push('j.recruitment_batch = ?')
+    values.push(query.recruitmentBatch.trim())
+  }
   const order = query.sort === 'deadline' ? 'j.deadline IS NULL, j.deadline ASC'
     : query.sort === 'company' ? 'c.company_name ASC, j.job_name ASC' : 'j.updated_at DESC'
   const page = Math.max(1, query.page ?? 1)
@@ -48,6 +58,51 @@ export async function listJobs(query: JobQuery = {}) {
   const countRows = await select<{ count: number }>(`SELECT COUNT(*) AS count FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE ${where}`, values)
   const items = await select<Job>(`SELECT ${jobColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize])
   return { items, total: Number(countRows[0]?.count ?? 0) }
+}
+
+export async function listJobLibrary(query: Omit<JobQuery, 'page' | 'pageSize'> = {}) {
+  const clauses: string[] = ['1=1']
+  const values: unknown[] = []
+  if (query.keyword?.trim()) {
+    const value = `%${query.keyword.trim()}%`
+    clauses.push('(j.job_name LIKE ? OR c.company_name LIKE ? OR j.location LIKE ? OR j.recruitment_batch LIKE ? OR j.notes LIKE ?)')
+    values.push(value, value, value, value, value)
+  }
+  if (query.stage) {
+    clauses.push("COALESCE(a.stage, 'TO_APPLY') = ?")
+    values.push(query.stage)
+  }
+  if (query.location?.trim()) {
+    clauses.push('(j.location LIKE ? OR c.headquarters LIKE ?)')
+    const location = `%${query.location.trim()}%`
+    values.push(location, location)
+  }
+  if (query.companyType?.trim()) {
+    clauses.push('c.company_type = ?')
+    values.push(query.companyType.trim())
+  }
+  if (query.recruitmentBatch?.trim()) {
+    clauses.push('j.recruitment_batch = ?')
+    values.push(query.recruitmentBatch.trim())
+  }
+  const order = query.sort === 'deadline' ? 'c.company_name ASC, j.deadline IS NULL, j.deadline ASC'
+    : query.sort === 'updated' ? 'c.updated_at DESC, j.updated_at DESC' : 'c.company_name ASC, j.job_name ASC'
+  return select<Job>(`SELECT ${jobColumns}, c.company_type AS "companyType", c.headquarters
+    FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id
+    WHERE ${clauses.join(' AND ')} ORDER BY ${order}`, values)
+}
+
+export async function listJobLibraryOptions() {
+  const [locations, companyTypes, batches] = await Promise.all([
+    select<{ value: string }>(`SELECT DISTINCT location AS value FROM jobs WHERE TRIM(COALESCE(location, '')) <> '' ORDER BY location`),
+    select<{ value: string }>(`SELECT DISTINCT company_type AS value FROM companies WHERE TRIM(COALESCE(company_type, '')) <> '' ORDER BY company_type`),
+    select<{ value: string }>(`SELECT DISTINCT recruitment_batch AS value FROM jobs WHERE TRIM(COALESCE(recruitment_batch, '')) <> '' ORDER BY recruitment_batch`),
+  ])
+  return {
+    locations: locations.map(item => item.value),
+    companyTypes: companyTypes.map(item => item.value),
+    batches: batches.map(item => item.value),
+  }
 }
 
 export async function getJob(id: number) {

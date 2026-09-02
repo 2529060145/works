@@ -25,7 +25,7 @@ test('header search, navigation and theme controls work', async ({ page }) => {
   await search.fill('软件开发')
   await search.press('Enter')
   await expect(page).toHaveURL(/\/jobs\?q=/)
-  await expect(page.getByPlaceholder('企业、岗位、地点或备注')).toHaveValue('软件开发')
+  await expect(page.getByPlaceholder('搜索企业、岗位、地点、招聘批次...')).toHaveValue('软件开发')
 
   await page.getByTitle('提醒').click()
   await expect(page).toHaveURL(/\/reminders$/)
@@ -65,6 +65,18 @@ test('job dialog supports inline company creation', async ({ page }) => {
   await page.getByPlaceholder('搜索或输入企业名称').fill('中国移动山东分公司')
   await expect(page.getByText('保存岗位时将自动创建', { exact: false })).toBeVisible()
   await expect(page.getByRole('button', { name: '立即创建' })).toBeVisible()
+})
+
+test('job library exposes grouped management controls', async ({ page }) => {
+  await page.goto('/jobs')
+  await expect(page.getByRole('button', { name: '全部展开' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '全部折叠' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '刷新岗位库' })).toBeVisible()
+  await expect(page.getByText('全部地区', { exact: true })).toBeVisible()
+  await expect(page.getByText('全部性质', { exact: true })).toBeVisible()
+  await expect(page.getByText('全部批次', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '更多筛选' }).click()
+  await expect(page.getByText('排序方式')).toBeVisible()
 })
 
 test('desktop layouts do not overflow horizontally', async ({ page }) => {

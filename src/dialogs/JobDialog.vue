@@ -27,9 +27,12 @@ const rules: FormRules = {
   salaryMax: [{ validator: (_: unknown, value: number, callback: (error?: Error) => void) => value == null || form.salaryMin == null || form.salaryMin <= value ? callback() : callback(new Error('最高薪资不能低于最低薪资')), trigger: 'blur' }],
 }
 
-async function open(record?: Job, companyId?: number) {
+async function open(record?: Job, company?: Pick<Company, 'id' | 'companyName'>) {
   editingId.value = record?.id
-  Object.assign(form, emptyForm(), record ?? {}, { companyName: record?.companyName ?? '' }, companyId ? { companyId } : {})
+  Object.assign(form, emptyForm(), record ?? {}, {
+    companyId: record?.companyId ?? company?.id ?? 0,
+    companyName: record?.companyName ?? company?.companyName ?? '',
+  })
   visible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
