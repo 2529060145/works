@@ -80,7 +80,7 @@ test('job library exposes grouped management controls', async ({ page }) => {
 })
 
 test('desktop layouts do not overflow horizontally', async ({ page }) => {
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }]) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 1050, height: 800 }]) {
     await page.setViewportSize(viewport)
     for (const path of ['/dashboard', '/jobs', '/progress', '/settings']) {
       await page.goto(path)
