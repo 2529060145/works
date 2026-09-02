@@ -22,6 +22,21 @@
   box-shadow: 0 10px 20px rgba(91, 92, 226, 0.18);
 }
 
+.el-button--primary.is-plain {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--border-color));
+  color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: none;
+}
+
+.el-button--primary.is-plain:hover,
+.el-button--primary.is-plain:focus-visible {
+  border-color: var(--primary);
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 7px 16px rgba(79, 110, 247, 0.18);
+}
+
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner {

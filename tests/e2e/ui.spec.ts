@@ -75,8 +75,17 @@ test('job library exposes grouped management controls', async ({ page }) => {
   await expect(page.getByText('全部地区', { exact: true })).toBeVisible()
   await expect(page.getByText('全部性质', { exact: true })).toBeVisible()
   await expect(page.getByText('全部批次', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '更多筛选' }).click()
+  const moreFilters = page.getByRole('button', { name: '更多筛选' })
+  await moreFilters.click()
   await expect(page.getByText('排序方式')).toBeVisible()
+  await page.mouse.move(0, 0)
+  await page.waitForTimeout(250)
+  const colors = await moreFilters.evaluate(element => {
+    const style = getComputedStyle(element)
+    return { color: style.color, background: style.backgroundColor }
+  })
+  expect(colors.color).not.toBe(colors.background)
+  expect(colors.background).toBe('rgb(255, 255, 255)')
 })
 
 test('desktop layouts do not overflow horizontally', async ({ page }) => {
