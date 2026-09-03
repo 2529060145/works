@@ -14,6 +14,36 @@ export interface DashboardData {
   companyTypes: { name: string; value: number }[]
 }
 
+export type JobTrendDays = 7 | 30 | 90
+
+export interface JobTrendPoint {
+  date: string
+  addedJobs: number
+  submittedJobs: number
+  pendingJobs: number
+}
+
+export async function getJobTrend(days: JobTrendDays): Promise<JobTrendPoint[]> {
+  const safeDays = [7, 30, 90].includes(days) ? days : 30
+  const rows = await select<JobTrendPoint>(`WITH RECURSIVE dates(date) AS (
+      SELECT date('now','localtime','-${safeDays - 1} day')
+      UNION ALL SELECT date(date,'+1 day') FROM dates WHERE date < date('now','localtime')
+    )
+    SELECT dates.date,
+      (SELECT COUNT(*) FROM jobs WHERE date(created_at)=dates.date) AS "addedJobs",
+      (SELECT COUNT(*) FROM applications WHERE application_date=dates.date) AS "submittedJobs",
+      (SELECT COUNT(*) FROM jobs j LEFT JOIN applications a ON a.job_id=j.id
+        WHERE date(j.created_at)<=dates.date AND (a.application_date IS NULL OR date(a.application_date)>dates.date)) AS "pendingJobs"
+    FROM dates ORDER BY dates.date`)
+  const normalized = rows.map(item => ({
+    date: item.date,
+    addedJobs: Number(item.addedJobs),
+    submittedJobs: Number(item.submittedJobs),
+    pendingJobs: Number(item.pendingJobs),
+  }))
+  return normalized.some(item => item.addedJobs || item.submittedJobs || item.pendingJobs) ? normalized : []
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const stageRows = await select<{ stage: ApplicationStage; value: number }>(`SELECT COALESCE(a.stage,'TO_APPLY') AS stage, COUNT(*) AS value FROM jobs j LEFT JOIN applications a ON a.job_id=j.id GROUP BY COALESCE(a.stage,'TO_APPLY')`)
   const stages = { TO_APPLY:0, APPLIED:0, WRITTEN_TEST:0, INTERVIEW:0, OFFER:0, REJECTED:0, WITHDRAWN:0, UNSUITABLE:0 } satisfies Record<ApplicationStage, number>

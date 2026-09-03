@@ -60,6 +60,22 @@ test('progress board is view-only and exposes all filters', async ({ page }) => 
   await expect(page.locator('.job-card .el-select')).toHaveCount(0)
 })
 
+test('schedule renders month calendar controls and dashboard exposes trend ranges', async ({ page }) => {
+  await page.goto('/schedule')
+  await expect(page.getByText('本月事件', { exact: true })).toBeVisible()
+  await expect(page.getByText('有安排日期', { exact: true })).toBeVisible()
+  await expect(page.getByText('截止提醒', { exact: true })).toBeVisible()
+  await expect(page.getByTitle('上一个月')).toBeVisible()
+  await expect(page.getByTitle('下一个月')).toBeVisible()
+  expect(await page.locator('.day-cell').count()).toBeGreaterThanOrEqual(35)
+
+  await page.goto('/dashboard')
+  await expect(page.getByText('求职趋势', { exact: true })).toBeVisible()
+  await expect(page.getByText('7 天', { exact: true })).toBeVisible()
+  await expect(page.getByText('30 天', { exact: true })).toBeVisible()
+  await expect(page.getByText('90 天', { exact: true })).toBeVisible()
+})
+
 test('core add dialogs expose complete forms', async ({ page }) => {
   for (const [path, button, dialogName] of [
     ['/jobs', '新增岗位', '新增岗位'],

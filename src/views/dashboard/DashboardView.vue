@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { init, use, type ECharts } from 'echarts/core'
-import { BarChart, PieChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { useRouter } from 'vue-router'
@@ -13,7 +13,7 @@ import CompanyDialog from '../../dialogs/CompanyDialog.vue'
 import JobDialog from '../../dialogs/JobDialog.vue'
 import StatusTag from '../../components/common/StatusTag.vue'
 import { applicationStageColors, applicationStageLabels } from '../../constants/status'
-import { getDashboardData, type DashboardData } from '../../services/statisticsService'
+import { getDashboardData, getJobTrend, type DashboardData, type JobTrendDays, type JobTrendPoint } from '../../services/statisticsService'
 import { isTauriRuntime } from '../../services/databaseService'
 
 const todayText = computed(() => {
@@ -25,12 +25,15 @@ const todayText = computed(() => {
   }).format(new Date())
 })
 
-use([BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
+use([BarChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
 
 const router=useRouter(),loading=ref(false),companyDialog=ref<InstanceType<typeof CompanyDialog>>(),jobDialog=ref<InstanceType<typeof JobDialog>>()
-const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyChart=ref<HTMLElement>()
+const dashboardPage=ref<HTMLElement>()
+const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyChart=ref<HTMLElement>(),trendChart=ref<HTMLElement>()
+const trendRange=ref<JobTrendDays>(30),trendData=ref<JobTrendPoint[]>([])
 const data=ref<DashboardData>({totalJobs:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 let chartInstances:ECharts[]=[]
+let resizeObserver:ResizeObserver|undefined
 const stats=computed(()=>[
   { title:'岗位总数',value:data.value.totalJobs,description:'全部岗位',tone:'primary' as const,icon:Briefcase },
   { title:'待投递',value:data.value.stages.TO_APPLY,description:'仍具备投递资格',tone:'primary' as const,icon:Promotion },
@@ -46,16 +49,27 @@ function renderCharts(){chartInstances.forEach(i=>i.dispose());chartInstances=[]
   const progress=init(progressChart.value),location=init(locationChart.value),company=init(companyChart.value);chartInstances=[progress,location,company]
   progress.setOption({...base,color:Object.values(applicationStageColors),tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['48%','72%'],center:['50%','43%'],label:{show:false},data:Object.entries(data.value.stages).filter(([,value])=>value>0).map(([name,value])=>({name:applicationStageLabels[name as keyof typeof applicationStageLabels],value,itemStyle:{color:applicationStageColors[name as keyof typeof applicationStageColors]}}))}]})
   location.setOption({...base,tooltip:{trigger:'axis'},grid:{left:20,right:18,top:10,bottom:20,containLabel:true},xAxis:{type:'value',minInterval:1,splitLine:{lineStyle:{color:'#eef1f6'}}},yAxis:{type:'category',data:data.value.locations.map(i=>i.name).reverse(),axisTick:{show:false}},series:[{type:'bar',data:data.value.locations.map(i=>i.value).reverse(),barWidth:14,itemStyle:{color:'#4f6ef7',borderRadius:[0,4,4,0]}}]})
-  company.setOption({...base,tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['45%','70%'],center:['50%','43%'],label:{show:false},data:data.value.companyTypes}]})
+  company.setOption({...base,color:['#4F6FEA','#43BFAE','#8B7CF6','#F5B84B','#F26B67','#6E8FEF','#7E8DAA','#62CFA2','#A77CF3'],tooltip:{trigger:'item'},legend:{type:'scroll',bottom:0,left:'center',itemWidth:10,itemHeight:10,itemGap:14,textStyle:{fontSize:13,fontWeight:400,color:'#52617A',lineHeight:20}},series:[{type:'pie',radius:['34%','54%'],center:['50%','34%'],label:{show:false},data:data.value.companyTypes}]})
+  renderTrend()
 }
-async function load(){if(!isTauriRuntime())return;loading.value=true;try{data.value=await getDashboardData();await nextTick();renderCharts()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取仪表盘失败')}finally{loading.value=false}}
+function renderTrend(){
+  const old=chartInstances.find(item=>item.getDom()===trendChart.value);if(old){old.dispose();chartInstances=chartInstances.filter(item=>item!==old)}
+  if(!trendChart.value||!trendData.value.length)return
+  const chart=init(trendChart.value);chartInstances.push(chart)
+  const colors={added:'#4F6FEA',submitted:'#43BFAE',pending:'#F5B84B'}
+  const interval=trendRange.value===7?0:trendRange.value===30?4:12
+  const series=(name:string,key:keyof JobTrendPoint,color:string)=>({name,type:'line',smooth:.3,showSymbol:false,symbol:'circle',symbolSize:7,lineStyle:{width:2.4,color},itemStyle:{color},areaStyle:{color,opacity:.07},data:trendData.value.map(item=>item[key])})
+  chart.setOption({animationDuration:350,color:Object.values(colors),tooltip:{trigger:'axis',backgroundColor:'rgba(255,255,255,.97)',borderColor:'#E8ECF3',textStyle:{color:'#172033'},formatter:(params:any[])=>{const index=params[0]?.dataIndex??0;const point=trendData.value[index];const current=index===trendData.value.length-1?`<br/><span style="color:#7B879D">当前有效待投递：${data.value.stages.TO_APPLY}</span>`:'';return `<strong>${point.date}</strong><br/>新增岗位　${point.addedJobs}<br/>新投递岗位　${point.submittedJobs}<br/>未投递岗位　${point.pendingJobs}${current}`}},legend:{top:4,left:8,itemWidth:16,itemHeight:8,itemGap:22,textStyle:{color:'#52617A',fontSize:13}},grid:{left:32,right:22,top:58,bottom:26,containLabel:true},xAxis:{type:'category',boundaryGap:false,data:trendData.value.map(item=>item.date),axisTick:{show:false},axisLine:{lineStyle:{color:'#DCE2ED'}},axisLabel:{interval,formatter:(value:string)=>value.slice(5),color:'#7B879D'}},yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#7B879D'},axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:'#EEF1F6'}}},series:[series('新添加岗位','addedJobs',colors.added),series('新投递岗位','submittedJobs',colors.submitted),series('未投递岗位','pendingJobs',colors.pending)]})
+}
+async function loadTrend(){if(!isTauriRuntime())return;try{trendData.value=await getJobTrend(trendRange.value);await nextTick();renderTrend()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取求职趋势失败')}}
+async function load(){if(!isTauriRuntime())return;loading.value=true;try{const [dashboard,trend]=await Promise.all([getDashboardData(),getJobTrend(trendRange.value)]);data.value=dashboard;trendData.value=trend;await nextTick();renderCharts()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取仪表盘失败')}finally{loading.value=false}}
 function resizeCharts(){chartInstances.forEach(i=>i.resize())}
-onMounted(()=>{load();window.addEventListener('resize',resizeCharts)})
-onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInstances.forEach(i=>i.dispose())})
+onMounted(()=>{load();window.addEventListener('resize',resizeCharts);resizeObserver=new ResizeObserver(resizeCharts);if(dashboardPage.value)resizeObserver.observe(dashboardPage.value)})
+onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);resizeObserver?.disconnect();chartInstances.forEach(i=>i.dispose())})
 </script>
 
 <template>
-  <div v-loading="loading" class="dashboard-page">
+  <div ref="dashboardPage" v-loading="loading" class="dashboard-page">
     <el-alert v-if="!isTauriRuntime()" title="当前为界面预览。安装并启动 Windows 客户端后，仪表盘会显示本机 SQLite 数据。" type="info" show-icon :closable="false" />
     <section class="welcome-band">
       <div class="welcome-copy">
@@ -153,6 +167,18 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
         <div ref="companyChart" class="chart-host"></div>
       </AppCard>
     </div>
+
+    <AppCard class="panel trend-panel">
+      <div class="panel-head">
+        <div>
+          <h2>求职趋势</h2>
+          <p>岗位新增、投递与待投递变化</p>
+        </div>
+        <el-segmented v-model="trendRange" :options="[{label:'7 天',value:7},{label:'30 天',value:30},{label:'90 天',value:90}]" @change="loadTrend" />
+      </div>
+      <div v-if="trendData.length" ref="trendChart" class="trend-chart-host" />
+      <div v-else class="trend-empty"><strong>暂无趋势数据</strong><span>开始添加岗位后，这里会显示你的求职变化趋势。</span></div>
+    </AppCard>
 
     <div class="dashboard-grid bottom-columns">
       <AppCard class="panel">
@@ -382,7 +408,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
 }
 
 .chart-panel {
-  min-height: 280px;
+  min-height: 350px;
 }
 
 .table-empty,
@@ -422,8 +448,10 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
 
 .chart-host {
   width: 100%;
-  height: 190px;
+  height: 260px;
 }
+
+.trend-panel{min-height:380px}.trend-panel .panel-head{align-items:center}.trend-panel :deep(.el-segmented){--el-segmented-item-selected-bg-color:#4f6fea;--el-segmented-item-selected-color:#fff;background:#f2f4f8}.trend-chart-host{width:100%;height:300px}.trend-empty{display:grid;height:292px;place-content:center;gap:8px;color:var(--text-secondary);text-align:center;background:#fafbfe;border:1px dashed var(--border-color);border-radius:7px}.trend-empty strong{color:var(--text-primary);font-size:15px}
 
 .table-empty {
   border: 1px dashed var(--border-color);

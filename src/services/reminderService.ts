@@ -5,11 +5,41 @@ export interface ScheduleItem {
   jobId: number
   companyName: string
   jobName: string
-  eventType: 'DEADLINE' | 'WRITTEN_TEST' | 'INTERVIEW'
+  eventType: 'DEADLINE' | 'APPLICATION' | 'WRITTEN_TEST' | 'INTERVIEW' | 'OFFER' | 'REJECTED'
   eventLabel: string
   scheduledAt: string
   location?: string
   applicationBlocked?: boolean
+}
+
+export async function listScheduleByMonth(month: string) {
+  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('月份格式无效')
+  const start = `${month}-01`
+  return select<ScheduleItem>(`SELECT * FROM (
+    SELECT 'deadline-'||j.id AS id,j.id AS "jobId",c.company_name AS "companyName",j.job_name AS "jobName",
+      'DEADLINE' AS "eventType",'岗位截止' AS "eventLabel",j.deadline||' 23:59:59' AS "scheduledAt",j.location,0 AS "applicationBlocked"
+    FROM jobs j JOIN companies c ON c.id=j.company_id WHERE j.deadline IS NOT NULL
+    UNION ALL
+    SELECT 'application-'||a.id,j.id,c.company_name,j.job_name,'APPLICATION','已投递',a.application_date||' 12:00:00',j.location,0
+    FROM applications a JOIN jobs j ON j.id=a.job_id JOIN companies c ON c.id=j.company_id WHERE a.application_date IS NOT NULL
+    UNION ALL
+    SELECT 'written-'||w.id,j.id,c.company_name,j.job_name,'WRITTEN_TEST','笔试',w.scheduled_at,w.location,0
+    FROM written_tests w JOIN jobs j ON j.id=w.job_id JOIN companies c ON c.id=j.company_id
+    UNION ALL
+    SELECT 'interview-'||i.id,j.id,c.company_name,j.job_name,'INTERVIEW',
+      CASE i.round WHEN 'FIRST' THEN '一面' WHEN 'SECOND' THEN '二面' WHEN 'THIRD' THEN '三面' WHEN 'HR' THEN 'HR 面' ELSE '面试' END,
+      i.scheduled_at,i.location,0
+    FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id
+    UNION ALL
+    SELECT 'result-'||a.id,j.id,c.company_name,j.job_name,
+      CASE a.stage WHEN 'OFFER' THEN 'OFFER' ELSE 'REJECTED' END,
+      CASE a.stage WHEN 'OFFER' THEN 'Offer' ELSE '淘汰' END,
+      a.updated_at,j.location,0
+    FROM applications a JOIN jobs j ON j.id=a.job_id JOIN companies c ON c.id=j.company_id
+    WHERE a.stage IN ('OFFER','REJECTED')
+  ) events
+  WHERE datetime("scheduledAt")>=datetime(?) AND datetime("scheduledAt")<datetime(?,'+1 month')
+  ORDER BY datetime("scheduledAt"),"companyName","jobName"`, [start, start])
 }
 
 export async function listSchedule(days?: number) {

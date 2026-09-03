@@ -73,7 +73,7 @@ function navigate(path: string) {
       <button class="collapse-btn" type="button" @click="appStore.toggleSidebar()">
         <el-icon><component :is="appStore.sidebarCollapsed ? Expand : Fold" /></el-icon>
       </button>
-      <span v-if="!appStore.sidebarCollapsed">v1.0.0</span>
+      <span v-if="!appStore.sidebarCollapsed">v0.1.4</span>
     </div>
   </aside>
 </template>
@@ -133,13 +133,15 @@ function navigate(path: string) {
 
   strong {
     color: var(--text-primary);
-    font-size: 15px;
+    font-size: 18px;
+    font-weight: 700;
     line-height: 1.4;
   }
 
   span {
-    color: var(--text-secondary);
-    font-size: 12px;
+    color: #7b879d;
+    font-size: 13px;
+    font-weight: 400;
   }
 }
 
@@ -157,15 +159,18 @@ function navigate(path: string) {
 .nav-item {
   display: flex;
   width: 100%;
-  height: 42px;
+  height: 46px;
   align-items: center;
-  gap: 11px;
+  gap: 13px;
   border: 0;
   border-radius: 10px;
-  color: var(--text-secondary);
+  padding: 0 15px;
+  color: #52617a;
   background: transparent;
   cursor: pointer;
-  font: inherit;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
   text-align: left;
   transition:
     background 160ms ease,
@@ -174,7 +179,8 @@ function navigate(path: string) {
 
   .el-icon {
     flex: 0 0 auto;
-    font-size: 18px;
+    color: #71819b;
+    font-size: 19px;
   }
 
   span {
@@ -186,12 +192,16 @@ function navigate(path: string) {
   &:hover {
     color: var(--primary);
     background: var(--primary-tint);
+
+    .el-icon { color: var(--primary); }
   }
 
   &.active {
     color: var(--primary);
-    background: var(--primary-tint);
+    background: #eef2ff;
     font-weight: 600;
+
+    .el-icon { color: var(--primary); }
   }
 }
 
@@ -202,8 +212,9 @@ function navigate(path: string) {
   span {
     display: inline-block;
     margin-top: 12px;
-    color: var(--text-tertiary);
-    font-size: 12px;
+    color: #8491a7;
+    font-size: 13px;
+    font-weight: 500;
   }
 }
 
