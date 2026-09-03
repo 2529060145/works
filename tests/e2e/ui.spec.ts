@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 const routes = [
   ['/home', '今天是'], ['/jobs', '岗位库'], ['/companies', '企业管理'], ['/progress', '投递进度'],
-  ['/schedule', '日程安排'], ['/written-tests', '笔试管理'], ['/interviews', '面试管理'],
+  ['/schedule', '日程安排'], ['/workflow', '招聘流程'],
   ['/statistics', '数据统计'], ['/tags', '标签管理'], ['/reminders', '提醒中心'],
   ['/data/import', 'Excel 导入'], ['/data/export', 'Excel 导出'], ['/data/backup', '备份与恢复'], ['/settings', '系统设置'],
 ] as const
@@ -86,16 +86,22 @@ test('schedule renders month calendar controls and dashboard exposes trend range
   await expect(page.getByText('90 天', { exact: true })).toBeVisible()
 })
 
-test('core add dialogs expose complete forms', async ({ page }) => {
-  for (const [path, button, dialogName] of [
-    ['/jobs', '新增岗位', '新增岗位'],
-    ['/written-tests', '新增笔试', '新增笔试'],
-    ['/interviews', '新增面试', '新增面试'],
-  ]) {
-    await page.goto(path)
-    await page.getByRole('button', { name: button }).click()
-    await expect(page.getByRole('dialog', { name: dialogName })).toBeVisible()
-  }
+test('job creation and unified recruitment workflow controls render', async ({ page }) => {
+  await page.goto('/jobs')
+  await page.getByRole('button', { name: '新增岗位' }).click()
+  await expect(page.getByRole('dialog', { name: '新增岗位' })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.goto('/workflow')
+  await expect(page.getByRole('heading', { name: '招聘流程', exact: true })).toBeVisible()
+  await expect(page.getByText('进行中', { exact: true })).toBeVisible()
+  await expect(page.getByText('历史结果', { exact: true })).toBeVisible()
+  await expect(page.getByText('全部', { exact: true })).toBeVisible()
+
+  await page.goto('/written-tests')
+  await expect(page).toHaveURL(/\/workflow$/)
+  await page.goto('/interviews')
+  await expect(page).toHaveURL(/\/workflow$/)
 })
 
 test('job dialog supports inline company creation', async ({ page }) => {
@@ -132,7 +138,7 @@ test('job library exposes grouped management controls', async ({ page }) => {
 test('desktop layouts do not overflow horizontally', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 1050, height: 800 }]) {
     await page.setViewportSize(viewport)
-    for (const path of ['/home', '/jobs', '/progress', '/settings']) {
+    for (const path of ['/home', '/jobs', '/progress', '/workflow', '/settings']) {
       await page.goto(path)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
       expect(overflow, `${path} overflows at ${viewport.width}px`).toBeFalsy()

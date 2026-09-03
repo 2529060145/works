@@ -4,7 +4,7 @@ use rusqlite::{
     types::{Value as SqlValue, ValueRef},
     Connection, OpenFlags,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Number, Value};
 use std::{
     fs,
@@ -25,6 +25,13 @@ struct PortableDatabase {
 struct ExecuteResult {
     rows_affected: usize,
     last_insert_id: i64,
+}
+
+#[derive(Deserialize)]
+struct TransactionStatement {
+    query: String,
+    #[serde(default)]
+    values: Vec<Value>,
 }
 
 #[derive(Serialize)]
@@ -141,6 +148,33 @@ fn database_execute(
     Ok(ExecuteResult {
         rows_affected,
         last_insert_id: connection.last_insert_rowid(),
+    })
+}
+
+#[tauri::command]
+fn database_transaction(
+    state: State<'_, PortableDatabase>,
+    statements: Vec<TransactionStatement>,
+) -> Result<ExecuteResult, String> {
+    let mut guard = state.connection.lock().map_err(|error| error.to_string())?;
+    let connection = guard
+        .as_mut()
+        .ok_or_else(|| "数据库当前不可用".to_string())?;
+    let transaction = connection
+        .transaction()
+        .map_err(|error| error.to_string())?;
+    let mut rows_affected = 0;
+    for statement in statements {
+        let parameters: Vec<SqlValue> = statement.values.into_iter().map(json_to_sql).collect();
+        rows_affected += transaction
+            .execute(&statement.query, params_from_iter(parameters.iter()))
+            .map_err(|error| error.to_string())?;
+    }
+    let last_insert_id = transaction.last_insert_rowid();
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(ExecuteResult {
+        rows_affected,
+        last_insert_id,
     })
 }
 
@@ -317,6 +351,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             database_execute,
+            database_transaction,
             database_select,
             portable_data_paths,
             backup_database,

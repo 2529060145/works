@@ -1,10 +1,11 @@
 import type { Application, ApplicationInput, ApplicationResult, ApplicationStage } from '../types/application'
 import { execute, select } from './databaseService'
 import { canApplyToJob } from './applicationEligibilityService'
+import { localDateTimeValue, localDateValue } from '../utils/dateTime'
 
 const columns = `a.id, a.job_id AS "jobId", c.company_name AS "companyName", j.job_name AS "jobName",
   j.location, j.recruitment_batch AS "recruitmentBatch",
-  a.stage, a.application_date AS "applicationDate", a.result, a.result_reason AS "resultReason", a.notes,
+  a.stage, a.application_date AS "applicationDate", a.submitted_at AS "submittedAt", a.result, a.result_reason AS "resultReason", a.notes,
   a.created_at AS "createdAt", a.updated_at AS "updatedAt"`
 
 export interface ApplicationQuery {
@@ -65,7 +66,7 @@ export async function updateApplicationResult(jobId: number, result: Application
     const progress = await select<{ hasInterview: number; hasWrittenTest: number }>(`SELECT
       EXISTS(SELECT 1 FROM interviews WHERE job_id=?) AS "hasInterview",
       EXISTS(SELECT 1 FROM written_tests WHERE job_id=?) AS "hasWrittenTest"`, [jobId, jobId])
-    stage = progress[0]?.hasInterview ? 'INTERVIEW' : progress[0]?.hasWrittenTest ? 'WRITTEN_TEST' : 'APPLIED'
+    stage = progress[0]?.hasInterview || progress[0]?.hasWrittenTest ? 'PROCESS' : 'APPLIED'
   }
   await execute(`UPDATE applications SET result=?, result_reason=?, stage=?,
     application_date=COALESCE(application_date,date('now','localtime')), updated_at=CURRENT_TIMESTAMP WHERE job_id=?`,
@@ -73,18 +74,19 @@ export async function updateApplicationResult(jobId: number, result: Application
 }
 
 export async function updateApplicationStage(jobId: number, stage: ApplicationStage) {
-  const applicationDate = stage === 'TO_APPLY' ? null : new Date().toISOString().slice(0, 10)
+  const applicationDate = stage === 'TO_APPLY' ? null : localDateValue()
   await execute(`INSERT INTO applications(job_id, stage, application_date, result) VALUES (?, ?, ?, 'PENDING')
     ON CONFLICT(job_id) DO UPDATE SET stage=excluded.stage,
     application_date=COALESCE(applications.application_date, excluded.application_date), updated_at=CURRENT_TIMESTAMP`, [jobId, stage, applicationDate])
 }
 
-export async function markJobApplied(jobId: number) {
+export async function markJobApplied(jobId: number, submittedAt = localDateTimeValue()) {
   const eligibility = await canApplyToJob(jobId)
   if (!eligibility.canApply) return { updated: false as const, eligibility }
-  await execute(`INSERT INTO applications(job_id, stage, application_date, result) VALUES (?, 'APPLIED', date('now','localtime'), 'PENDING')
-    ON CONFLICT(job_id) DO UPDATE SET stage='APPLIED', application_date=COALESCE(applications.application_date,date('now','localtime')),
-    result='PENDING', result_reason=NULL, updated_at=CURRENT_TIMESTAMP`, [jobId])
+  const applicationDate = submittedAt.slice(0, 10)
+  await execute(`INSERT INTO applications(job_id, stage, application_date, submitted_at, result) VALUES (?, 'APPLIED', ?, ?, 'PENDING')
+    ON CONFLICT(job_id) DO UPDATE SET stage='APPLIED', application_date=excluded.application_date,submitted_at=excluded.submitted_at,
+    result='PENDING', result_reason=NULL, updated_at=CURRENT_TIMESTAMP`, [jobId, applicationDate, submittedAt])
   return { updated: true as const, eligibility }
 }
 
@@ -95,7 +97,7 @@ export async function restoreJobToPending(jobId: number) {
     return { updated: false as const, blockedByStage: stage }
   }
   await execute(`INSERT INTO applications(job_id, stage, application_date, result) VALUES (?, 'TO_APPLY', NULL, 'PENDING')
-    ON CONFLICT(job_id) DO UPDATE SET stage='TO_APPLY', application_date=NULL, result='PENDING', result_reason=NULL, updated_at=CURRENT_TIMESTAMP`, [jobId])
+    ON CONFLICT(job_id) DO UPDATE SET stage='TO_APPLY', application_date=NULL, submitted_at=NULL, result='PENDING', result_reason=NULL, updated_at=CURRENT_TIMESTAMP`, [jobId])
   return { updated: true as const }
 }
 
@@ -103,11 +105,11 @@ export async function advanceApplicationStage(jobId: number, stage: ApplicationS
   const rows = await select<{ stage: ApplicationStage }>('SELECT stage FROM applications WHERE job_id=?', [jobId])
   const current = rows[0]?.stage ?? 'TO_APPLY'
   const rank: Record<ApplicationStage, number> = {
-    TO_APPLY: 0, APPLIED: 1, WRITTEN_TEST: 2, INTERVIEW: 3, OFFER: 4,
+    TO_APPLY: 0, APPLIED: 1, PROCESS: 2, OFFER: 4,
     REJECTED: 4, WITHDRAWN: 4, UNSUITABLE: 4,
   }
   if (!['OFFER', 'REJECTED'].includes(stage) && rank[stage] < rank[current]) return
-  const applicationDate = stage === 'TO_APPLY' ? null : new Date().toISOString().slice(0, 10)
+  const applicationDate = stage === 'TO_APPLY' ? null : localDateValue()
   await execute(`INSERT INTO applications(job_id, stage, application_date, result) VALUES (?, ?, ?, 'PENDING')
     ON CONFLICT(job_id) DO UPDATE SET stage=excluded.stage,
     application_date=COALESCE(applications.application_date,excluded.application_date), updated_at=CURRENT_TIMESTAMP`,

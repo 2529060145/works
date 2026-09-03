@@ -10,6 +10,11 @@ interface DatabaseClient {
   select<T>(query: string, values?: unknown[]): Promise<T>
 }
 
+export interface TransactionStatement {
+  query: string
+  values?: unknown[]
+}
+
 export interface PortableDataPaths {
   dataDirectory: string
   databasePath: string
@@ -69,6 +74,7 @@ const migrations = [
     job_id INTEGER NOT NULL UNIQUE,
     stage TEXT NOT NULL DEFAULT 'TO_APPLY',
     application_date TEXT,
+    submitted_at TEXT,
     result TEXT NOT NULL DEFAULT 'PENDING',
     result_reason TEXT,
     notes TEXT,
@@ -80,8 +86,12 @@ const migrations = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id INTEGER NOT NULL,
     scheduled_at TEXT NOT NULL,
+    sequence_no INTEGER NOT NULL DEFAULT 1,
+    time_tbd INTEGER NOT NULL DEFAULT 0,
     form TEXT NOT NULL DEFAULT 'ONLINE',
+    test_type TEXT,
     location TEXT,
+    meeting_url TEXT,
     status TEXT NOT NULL DEFAULT 'WAITING',
     result TEXT NOT NULL DEFAULT 'PENDING',
     notes TEXT,
@@ -94,8 +104,12 @@ const migrations = [
     job_id INTEGER NOT NULL,
     round TEXT NOT NULL DEFAULT 'FIRST',
     scheduled_at TEXT NOT NULL,
+    time_tbd INTEGER NOT NULL DEFAULT 0,
     form TEXT NOT NULL DEFAULT 'ONLINE',
+    interview_type TEXT,
     location TEXT,
+    meeting_url TEXT,
+    interviewer TEXT,
     status TEXT NOT NULL DEFAULT 'WAITING',
     result TEXT NOT NULL DEFAULT 'PENDING',
     notes TEXT,
@@ -156,6 +170,26 @@ export async function initializeDatabase() {
   if (!applicationColumns.some(column => column.name === 'result_reason')) {
     await database.execute('ALTER TABLE applications ADD COLUMN result_reason TEXT')
   }
+  if (!applicationColumns.some(column => column.name === 'submitted_at')) {
+    await database.execute('ALTER TABLE applications ADD COLUMN submitted_at TEXT')
+    await database.execute("UPDATE applications SET submitted_at=application_date||' 12:00:00' WHERE application_date IS NOT NULL")
+  }
+  const writtenColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(written_tests)')).map(column => column.name))
+  if (!writtenColumns.has('sequence_no')) await database.execute('ALTER TABLE written_tests ADD COLUMN sequence_no INTEGER NOT NULL DEFAULT 1')
+  if (!writtenColumns.has('time_tbd')) await database.execute('ALTER TABLE written_tests ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0')
+  if (!writtenColumns.has('test_type')) await database.execute('ALTER TABLE written_tests ADD COLUMN test_type TEXT')
+  if (!writtenColumns.has('meeting_url')) await database.execute('ALTER TABLE written_tests ADD COLUMN meeting_url TEXT')
+  await database.execute(`UPDATE written_tests SET sequence_no=(SELECT COUNT(*) FROM written_tests previous
+    WHERE previous.job_id=written_tests.job_id AND (previous.created_at<written_tests.created_at
+      OR (previous.created_at=written_tests.created_at AND previous.id<=written_tests.id)))`)
+  const interviewColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(interviews)')).map(column => column.name))
+  if (!interviewColumns.has('time_tbd')) await database.execute('ALTER TABLE interviews ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0')
+  if (!interviewColumns.has('interview_type')) await database.execute('ALTER TABLE interviews ADD COLUMN interview_type TEXT')
+  if (!interviewColumns.has('meeting_url')) await database.execute('ALTER TABLE interviews ADD COLUMN meeting_url TEXT')
+  if (!interviewColumns.has('interviewer')) await database.execute('ALTER TABLE interviews ADD COLUMN interviewer TEXT')
+  await database.execute("UPDATE written_tests SET status='SCHEDULED' WHERE status='WAITING'")
+  await database.execute("UPDATE interviews SET status='SCHEDULED' WHERE status='WAITING'")
+  await database.execute("UPDATE applications SET stage='PROCESS' WHERE stage IN ('WRITTEN_TEST','INTERVIEW')")
   await database.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)', [1])
   for (const [name, color] of [
     ['重点', '#ef5b5b'],
@@ -188,4 +222,10 @@ export async function select<T>(query: string, values: unknown[] = []) {
 
 export async function execute(query: string, values: unknown[] = []) {
   return (await getDatabase()).execute(query, values)
+}
+
+export async function transaction(statements: TransactionStatement[]) {
+  if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中使用数据功能')
+  if (!initialized) await initializeDatabase()
+  return invoke<ExecuteResult>('database_transaction', { statements: statements.map(item => ({ query: item.query, values: item.values ?? [] })) })
 }

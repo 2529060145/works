@@ -41,7 +41,7 @@ test('legacy applied jobs without a date can update a color-coded result', async
   })
 
   await page.goto('/jobs')
-  await expect(page.getByText('旧数据测试企业', { exact: true })).toBeVisible()
+  await expect(page.locator('.company-name-line strong', { hasText: '旧数据测试企业' })).toBeVisible()
   const resultSelect = page.locator('.result-select')
   const stageSelect = page.locator('.stage-select')
   const rowActions = page.locator('.row-actions')

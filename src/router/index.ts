@@ -54,16 +54,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '日程安排' },
       },
       {
+        path: 'workflow',
+        name: 'workflow',
+        component: () => import('../views/workflow/RecruitmentWorkflowView.vue'),
+        meta: { title: '招聘流程' },
+      },
+      {
         path: 'written-tests',
-        name: 'written-tests',
-        component: () => import('../views/written-tests/WrittenTestsView.vue'),
-        meta: { title: '笔试管理' },
+        redirect: '/workflow',
       },
       {
         path: 'interviews',
-        name: 'interviews',
-        component: () => import('../views/interviews/InterviewsView.vue'),
-        meta: { title: '面试管理' },
+        redirect: '/workflow',
       },
       {
         path: 'statistics',

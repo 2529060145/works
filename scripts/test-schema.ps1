@@ -94,6 +94,30 @@ FROM (
   FROM companies c LEFT JOIN jobs j ON j.company_id=c.id LEFT JOIN applications a ON a.job_id=j.id
   GROUP BY c.id,c.application_limit_type,c.max_applications
 ) company;
+
+INSERT INTO companies(company_name) VALUES('workflow-company');
+INSERT INTO jobs(company_id,job_name) VALUES((SELECT id FROM companies WHERE company_name='workflow-company'),'workflow-job');
+INSERT INTO applications(job_id,stage,application_date,submitted_at,result)
+  VALUES((SELECT id FROM jobs WHERE job_name='workflow-job'),'PROCESS','2026-09-03','2026-09-03 09:20:00','PENDING');
+SELECT 'workflow-empty=' || COUNT(*) FROM written_tests WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+BEGIN;
+INSERT INTO written_tests(job_id,sequence_no,scheduled_at,time_tbd,form,status,result)
+  VALUES((SELECT id FROM jobs WHERE job_name='workflow-job'),1,'2026-09-10 19:00:00',0,'ONLINE','SCHEDULED','PENDING');
+COMMIT;
+UPDATE written_tests SET status='COMPLETED',result='PASSED' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+INSERT INTO written_tests(job_id,sequence_no,scheduled_at,time_tbd,form,status,result)
+  SELECT (SELECT id FROM jobs WHERE job_name='workflow-job'),COALESCE(MAX(sequence_no),0)+1,'2026-09-12 00:00:00',1,'ONLINE','SCHEDULED','PENDING'
+  FROM written_tests WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+SELECT 'workflow-written=' || COUNT(*) || ',' || MAX(sequence_no) FROM written_tests WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+UPDATE written_tests SET status='COMPLETED',result='PASSED' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job') AND sequence_no=2;
+INSERT INTO interviews(job_id,round,scheduled_at,time_tbd,form,status,result)
+  VALUES((SELECT id FROM jobs WHERE job_name='workflow-job'),'SECOND','2026-09-15 14:00:00',0,'OFFLINE','SCHEDULED','PENDING');
+BEGIN;
+UPDATE interviews SET status='COMPLETED',result='FAILED' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+UPDATE applications SET stage='REJECTED',result='FAILED',result_reason='second-interview-failed' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+COMMIT;
+SELECT 'workflow-failed=' || a.stage || ',' || a.result || ',' || a.result_reason FROM applications a JOIN jobs j ON j.id=a.job_id WHERE j.job_name='workflow-job';
+SELECT 'workflow-history=' || ((SELECT COUNT(*) FROM written_tests WHERE job_id=j.id)+(SELECT COUNT(*) FROM interviews WHERE job_id=j.id)) FROM jobs j WHERE j.job_name='workflow-job';
 '@
 
 $sql = ($statements -join ";`n") + ";`n" + $smokeSql
@@ -114,5 +138,12 @@ $expected = @('case1=5','case2=0','case3=4','case4=2','case5=0','case6=2','case7
 foreach ($line in $expected) {
   if ($result -notcontains $line) {
     throw "Application limit acceptance test failed: expected $line"
+  }
+}
+
+$workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed=REJECTED,FAILED,second-interview-failed','workflow-history=3')
+foreach ($line in $workflowExpected) {
+  if ($result -notcontains $line) {
+    throw "Recruitment workflow acceptance test failed: expected $line"
   }
 }

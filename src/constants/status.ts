@@ -3,8 +3,7 @@ import type { ApplicationResult, ApplicationStage } from '../types/application'
 export const applicationStageLabels: Record<ApplicationStage, string> = {
   TO_APPLY: '待投递',
   APPLIED: '已投递',
-  WRITTEN_TEST: '笔试',
-  INTERVIEW: '面试',
+  PROCESS: '面试/笔试',
   OFFER: 'Offer',
   REJECTED: '淘汰',
   WITHDRAWN: '主动放弃',
@@ -39,7 +38,7 @@ export const applicationStageOptions = Object.entries(applicationStageLabels).ma
 }))
 
 export const applicationStageColors: Record<ApplicationStage, string> = {
-  TO_APPLY: '#4F6FEA', APPLIED: '#43BFAE', WRITTEN_TEST: '#8B7CF6', INTERVIEW: '#F5B84B',
+  TO_APPLY: '#4F6FEA', APPLIED: '#43BFAE', PROCESS: '#8B7CF6',
   OFFER: '#36B77A', REJECTED: '#F26B67', WITHDRAWN: '#8796B5', UNSUITABLE: '#8796B5',
 }
 
@@ -48,7 +47,6 @@ export function stageTone(stage?: ApplicationStage): 'primary' | 'success' | 'wa
   if (stage === 'REJECTED' || stage === 'UNSUITABLE' || stage === 'WITHDRAWN') return 'danger'
   if (stage === 'TO_APPLY') return 'primary'
   if (stage === 'APPLIED') return 'teal'
-  if (stage === 'WRITTEN_TEST') return 'purple'
-  if (stage === 'INTERVIEW') return 'warning'
+  if (stage === 'PROCESS') return 'purple'
   return 'info'
 }

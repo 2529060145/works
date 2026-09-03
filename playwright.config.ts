@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 20_000,
   fullyParallel: false,
+  workers: 1,
   reporter: 'list',
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1',

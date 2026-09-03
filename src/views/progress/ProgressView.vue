@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ArrowDownBold, ArrowUpBold, CircleCheck, CircleClose, Document, Medal, Promotion, Search, User, View } from '@element-plus/icons-vue'
+import { ArrowDownBold, ArrowUpBold, CircleCheck, CircleClose, Connection, Medal, Promotion, Search, View } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import PageHeader from '../../components/common/PageHeader.vue'
 import StatusTag from '../../components/common/StatusTag.vue'
@@ -10,9 +10,12 @@ import { applicationStageLabels, stageTone } from '../../constants/status'
 import { listApplications } from '../../services/applicationService'
 import { listJobLibraryOptions } from '../../services/jobService'
 import { isTauriRuntime } from '../../services/databaseService'
+import { listWorkflowJobs, type WorkflowJob } from '../../services/recruitmentWorkflowService'
+import { displayDateTime } from '../../utils/dateTime'
 
 const router = useRouter()
 const rows = ref<Application[]>([])
+const workflows = ref(new Map<number,WorkflowJob>())
 const loading = ref(false)
 const keyword = ref('')
 const location = ref('')
@@ -20,8 +23,8 @@ const recruitmentBatch = ref('')
 const stage = ref<ApplicationStage | ''>('')
 const expandedStage = ref<ApplicationStage | null>(null)
 const options = ref({ locations: [] as string[], batches: [] as string[] })
-const activeStages = ['TO_APPLY', 'APPLIED', 'WRITTEN_TEST', 'INTERVIEW', 'OFFER', 'REJECTED'] as const
-const stageIcons = { TO_APPLY: Promotion, APPLIED: CircleCheck, WRITTEN_TEST: Document, INTERVIEW: User, OFFER: Medal, REJECTED: CircleClose } as const
+const activeStages = ['TO_APPLY', 'APPLIED', 'PROCESS', 'OFFER', 'REJECTED'] as const
+const stageIcons = { TO_APPLY: Promotion, APPLIED: CircleCheck, PROCESS: Connection, OFFER: Medal, REJECTED: CircleClose } as const
 const columns = computed(() => activeStages.filter(item => !stage.value || item === stage.value).map(item => ({
   stage: item,
   label: applicationStageLabels[item],
@@ -33,7 +36,8 @@ async function load() {
   if (!isTauriRuntime()) return
   loading.value = true
   try {
-    rows.value = await listApplications({ keyword: keyword.value, location: location.value, recruitmentBatch: recruitmentBatch.value, stage: stage.value })
+    const [applications,workflowRows]=await Promise.all([listApplications({ keyword: keyword.value, location: location.value, recruitmentBatch: recruitmentBatch.value, stage: stage.value }),listWorkflowJobs()])
+    rows.value=applications;workflows.value=new Map(workflowRows.map(item=>[item.jobId,item]))
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '读取投递进度失败')
   } finally {
@@ -92,6 +96,7 @@ onMounted(async () => {
             <div class="card-company">{{ item.companyName }}</div>
             <strong>{{ item.jobName }}</strong>
             <div class="card-meta"><span>{{ item.location || '地点未填写' }}</span><span>{{ item.recruitmentBatch || '批次未填写' }}</span></div>
+            <div v-if="item.stage==='PROCESS'" class="current-progress">当前：<strong>{{ workflows.get(item.jobId)?.currentNode?.label||'尚未安排' }}</strong><span v-if="workflows.get(item.jobId)?.currentNode"> · {{ displayDateTime(workflows.get(item.jobId)?.currentNode?.scheduledAt,workflows.get(item.jobId)?.currentNode?.timeTbd) }}</span></div>
             <div class="card-status"><StatusTag :type="stageTone(item.stage)">{{ applicationStageLabels[item.stage] }}</StatusTag><time>{{ item.applicationDate || '尚未投递' }}</time></div>
             <el-button :icon="View" link type="primary" @click.stop="router.push(`/jobs/${item.jobId}`)">查看岗位</el-button>
           </article>
@@ -106,7 +111,8 @@ onMounted(async () => {
 .page-stack{display:grid;gap:16px}.filter-bar{display:grid;grid-template-columns:minmax(240px,1.5fr) repeat(3,minmax(140px,.7fr)) auto auto;gap:10px;padding:14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);box-shadow:var(--shadow-card)}
 .kanban{display:grid;gap:10px;padding-bottom:8px}
 .kanban-column{--stage:#4f6fea;overflow:hidden;border:1px solid color-mix(in srgb,var(--stage) 34%,var(--border-color));border-radius:8px;background:color-mix(in srgb,var(--stage) 6%,var(--bg-card));box-shadow:0 5px 16px rgba(23,32,51,.05)}
-.stage-to_apply{--stage:#4f6fea}.stage-applied{--stage:#43bfae}.stage-written_test{--stage:#8b7cf6}.stage-interview{--stage:#f5b84b}.stage-offer{--stage:#36b77a}.stage-rejected{--stage:#f26b67}
+.stage-to_apply{--stage:#4f6fea}.stage-applied{--stage:#43bfae}.stage-process{--stage:#8b7cf6}.stage-offer{--stage:#36b77a}.stage-rejected{--stage:#f26b67}
 .kanban-column>header{display:flex;min-height:52px;align-items:center;justify-content:space-between;padding:10px 12px 10px 16px;color:#fff;background:var(--stage);font-weight:700}.kanban-column>header>span{display:flex;align-items:center;gap:8px}.kanban-column>header .el-icon{font-size:18px}.stage-header-actions{display:flex;align-items:center;gap:8px}.kanban-column header b{display:grid;min-width:28px;height:28px;place-items:center;border:1px solid rgba(255,255,255,.38);border-radius:6px;color:#fff;background:rgba(23,32,51,.15);font-size:12px}.expand-button{display:grid;width:32px;height:32px;padding:0;place-items:center;border:1px solid rgba(255,255,255,.46);border-radius:6px;color:#fff;background:rgba(23,32,51,.14);cursor:pointer;transition:background 150ms ease}.expand-button:hover{background:rgba(23,32,51,.28)}.column-body{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));align-content:start;gap:10px;padding:12px}.job-card{display:grid;gap:9px;padding:14px;border:1px solid color-mix(in srgb,var(--stage) 23%,var(--border-color));border-left:4px solid var(--stage);border-radius:7px;background:var(--bg-card);box-shadow:0 4px 14px rgba(23,32,51,.06);cursor:pointer;transition:transform 150ms ease,box-shadow 150ms ease}.job-card:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(23,32,51,.1)}.card-company{color:var(--text-secondary);font-size:12px}.job-card strong{font-size:14px;line-height:1.45}.card-meta,.card-status{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--text-secondary);font-size:12px}.card-meta span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.job-card .el-button{justify-self:end}.column-empty{display:grid;grid-column:1/-1;min-height:92px;place-items:center;border:1px dashed color-mix(in srgb,var(--stage) 42%,var(--border-color));border-radius:7px;color:color-mix(in srgb,var(--stage) 72%,var(--text-primary));background:color-mix(in srgb,var(--stage) 7%,var(--bg-card));font-size:12px}
 @media(max-width:1180px){.filter-bar{grid-template-columns:repeat(3,minmax(0,1fr))}.column-body{grid-template-columns:repeat(2,minmax(220px,1fr))}}@media(max-width:820px){.filter-bar,.column-body{grid-template-columns:1fr}}
+.current-progress{border-left:3px solid var(--stage);padding:6px 8px;color:var(--text-secondary);background:color-mix(in srgb,var(--stage) 7%,var(--bg-card));font-size:12px}.current-progress strong{font-size:12px}
 </style>

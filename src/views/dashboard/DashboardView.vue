@@ -15,6 +15,7 @@ import StatusTag from '../../components/common/StatusTag.vue'
 import { applicationStageColors, applicationStageLabels } from '../../constants/status'
 import { getDashboardData, getJobTrend, type DashboardData, type JobTrendDays, type JobTrendPoint } from '../../services/statisticsService'
 import { isTauriRuntime } from '../../services/databaseService'
+import { displayDateTime } from '../../utils/dateTime'
 
 const todayText = computed(() => {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -31,15 +32,15 @@ const router=useRouter(),loading=ref(false),companyDialog=ref<InstanceType<typeo
 const dashboardPage=ref<HTMLElement>()
 const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyChart=ref<HTMLElement>(),trendChart=ref<HTMLElement>()
 const trendRange=ref<JobTrendDays>(30),trendData=ref<JobTrendPoint[]>([])
-const data=ref<DashboardData>({totalJobs:0,effectiveOpportunities:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
+const data=ref<DashboardData>({totalJobs:0,effectiveOpportunities:0,stages:{TO_APPLY:0,APPLIED:0,PROCESS:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},workflow:{writtenTests:0,interviews:0,pending:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 let chartInstances:ECharts[]=[]
 let resizeObserver:ResizeObserver|undefined
 const stats=computed(()=>[
   { title:'收录岗位',value:data.value.totalJobs,description:'全部收录',tone:'primary' as const,icon:Briefcase },
   { title:'有效机会',value:data.value.effectiveOpportunities,description:'当前可投名额',tone:'primary' as const,icon:Promotion },
-  { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'teal' as const,icon:CircleCheck },
-  { title:'笔试',value:data.value.stages.WRITTEN_TEST,description:'进入笔试流程',tone:'purple' as const,icon:Document },
-  { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'warning' as const,icon:User },
+  { title:'已投递',value:data.value.stages.APPLIED+data.value.workflow.pending,description:'等待流程安排',tone:'teal' as const,icon:CircleCheck },
+  { title:'笔试',value:data.value.workflow.writtenTests,description:'当前笔试流程',tone:'purple' as const,icon:Document },
+  { title:'面试',value:data.value.workflow.interviews,description:'当前面试流程',tone:'warning' as const,icon:User },
   { title:'Offer',value:data.value.stages.OFFER,description:'已收获结果',tone:'success' as const,icon:Medal },
   { title:'淘汰',value:data.value.stages.REJECTED,description:'流程已结束',tone:'danger' as const,icon:CircleClose },
 ])
@@ -134,7 +135,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);resizeObs
           </div>
           <span class="count-pill">{{ data.upcoming.length }}</span>
         </div>
-        <button v-for="item in data.upcoming" :key="item.id" class="data-row" type="button" @click="router.push(`/jobs/${item.jobId}`)"><span><strong>{{ item.eventLabel }} · {{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><small>{{ item.scheduledAt.slice(5,16) }}</small></button><div v-if="!data.upcoming.length" class="table-empty info">暂无近期安排</div>
+        <button v-for="item in data.upcoming" :key="item.id" class="data-row" type="button" @click="router.push(`/jobs/${item.jobId}`)"><span><strong>{{ item.eventLabel }} · {{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><small>{{ displayDateTime(item.scheduledAt,item.timeTbd) }}</small></button><div v-if="!data.upcoming.length" class="table-empty info">暂无近期安排</div>
       </AppCard>
     </div>
 

@@ -9,6 +9,7 @@ import StatusTag from '../../components/common/StatusTag.vue'
 import type { ScheduleItem } from '../../services/reminderService'
 import { listScheduleByMonth } from '../../services/reminderService'
 import { isTauriRuntime } from '../../services/databaseService'
+import { calendarTime } from '../../utils/dateTime'
 
 const router = useRouter()
 const rows = ref<ScheduleItem[]>([])
@@ -100,7 +101,7 @@ onMounted(load)
       <div class="selected-head"><div><h2>{{ selectedLabel }}</h2><p>{{ selectedDate }}</p></div><span>{{ selectedEvents.length }} 项</span></div>
       <div v-if="selectedEvents.length" class="event-list">
         <button v-for="item in selectedEvents" :key="item.id" type="button" @click="router.push(`/jobs/${item.jobId}`)">
-          <time>{{ item.scheduledAt.slice(11,16) || '全天' }}</time>
+          <time>{{ calendarTime(item.scheduledAt, item.timeTbd) }}</time>
           <span class="event-marker" :style="{background:eventColor(item.eventType)}" />
           <span><strong>{{ item.companyName }}</strong><small>{{ item.jobName }}<template v-if="item.location"> · {{ item.location }}</template></small></span>
           <StatusTag :type="eventTone(item.eventType)">{{ item.eventLabel }}</StatusTag>

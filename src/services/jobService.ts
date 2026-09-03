@@ -9,7 +9,7 @@ const jobColumns = `j.id, j.company_id AS "companyId", c.company_name AS "compan
   j.education, j.major_requirement AS "majorRequirement", j.job_requirement AS "jobRequirement",
   j.recruitment_count AS "recruitmentCount", j.publish_date AS "publishDate", j.deadline,
   j.job_url AS "jobUrl", j.notes, j.created_at AS "createdAt", j.updated_at AS "updatedAt",
-  COALESCE(a.stage, 'TO_APPLY') AS stage, a.application_date AS "applicationDate",
+  COALESCE(a.stage, 'TO_APPLY') AS stage, a.application_date AS "applicationDate",a.submitted_at AS "submittedAt",
   COALESCE(a.result, 'PENDING') AS result, a.result_reason AS "resultReason"`
 
 export interface JobQuery {
@@ -150,5 +150,7 @@ export async function deleteJob(id: number) {
 }
 
 export async function listJobOptions() {
-  return select<{ id: number; label: string }>(`SELECT j.id, c.company_name || ' · ' || j.job_name AS label FROM jobs j JOIN companies c ON c.id=j.company_id ORDER BY c.company_name, j.job_name`)
+  return select<{ id: number; label: string }>(`SELECT j.id, c.company_name || ' · ' || j.job_name AS label FROM jobs j
+    JOIN companies c ON c.id=j.company_id JOIN applications a ON a.job_id=j.id
+    WHERE a.stage='PROCESS' ORDER BY c.company_name, j.job_name`)
 }

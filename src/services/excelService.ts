@@ -45,7 +45,8 @@ export async function importExcel():Promise<ImportReport|null>{
       const resultText=text(row,'投递结果','结果')
       const result=(resultByLabel[resultText]??(resultText in applicationResultLabels?resultText:'PENDING')) as ApplicationResult
       const resultReason=text(row,'未通过原因','投递结果原因')
-      let stage=(stageByLabel[stageText]??(stageText in applicationStageLabels?stageText:deliveryText==='已投递'?'APPLIED':'TO_APPLY')) as ApplicationStage
+      const legacyStage = stageText === '笔试' || stageText === '面试' || stageText === 'WRITTEN_TEST' || stageText === 'INTERVIEW' ? 'PROCESS' : undefined
+      let stage=(legacyStage??stageByLabel[stageText]??(stageText in applicationStageLabels?stageText:deliveryText==='已投递'?'APPLIED':'TO_APPLY')) as ApplicationStage
       if(result==='OFFER')stage='OFFER'
       else if(result==='UNSUITABLE')stage='UNSUITABLE'
       else if(['FAILED','JOB_CANCELLED','COMPANY_TERMINATED'].includes(result))stage='REJECTED'

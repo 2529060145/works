@@ -1,6 +1,8 @@
 export type WrittenTestForm = 'ONLINE' | 'OFFLINE' | 'OTHER'
-export type WrittenTestStatus = 'WAITING' | 'COMPLETED' | 'CANCELLED'
-export type WrittenTestResult = 'PENDING' | 'PASSED' | 'FAILED'
+export type WorkflowNodeStatus = 'PENDING_SCHEDULE' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'
+export type WorkflowNodeResult = 'PENDING' | 'PASSED' | 'FAILED' | 'CANCELLED'
+export type WrittenTestStatus = WorkflowNodeStatus
+export type WrittenTestResult = WorkflowNodeResult
 
 export interface WrittenTest {
   id: number
@@ -8,11 +10,15 @@ export interface WrittenTest {
   companyName: string
   jobName: string
   scheduledAt: string
+  sequenceNo: number
+  timeTbd: boolean
   form: WrittenTestForm
+  testType?: string
   location?: string
+  meetingUrl?: string
   status: WrittenTestStatus
   result: WrittenTestResult
   notes?: string
 }
 
-export type WrittenTestInput = Omit<WrittenTest, 'id' | 'companyName' | 'jobName'>
+export type WrittenTestInput = Omit<WrittenTest, 'id' | 'companyName' | 'jobName' | 'sequenceNo'>

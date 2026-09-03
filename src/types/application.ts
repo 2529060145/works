@@ -1,8 +1,7 @@
 export type ApplicationStage =
   | 'TO_APPLY'
   | 'APPLIED'
-  | 'WRITTEN_TEST'
-  | 'INTERVIEW'
+  | 'PROCESS'
   | 'OFFER'
   | 'REJECTED'
   | 'WITHDRAWN'
@@ -27,6 +26,7 @@ export interface Application {
   recruitmentBatch?: string
   stage: ApplicationStage
   applicationDate?: string
+  submittedAt?: string
   result: ApplicationResult
   resultReason?: string
   notes?: string
