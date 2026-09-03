@@ -44,7 +44,7 @@ export async function listScheduleByMonth(month: string) {
 }
 
 export async function listSchedule(days?: number) {
-  const limit = days ? `AND datetime("scheduledAt") <= datetime('now', 'localtime', '+${Math.max(1, Math.min(365, days))} days')` : ''
+  const limit = days ? `AND date("scheduledAt") <= date('now', 'localtime', '+${Math.max(1, Math.min(365, days))} days')` : ''
   return select<ScheduleItem>(`SELECT * FROM (
     SELECT 'deadline-' || j.id AS id, j.id AS "jobId", c.company_name AS "companyName", j.job_name AS "jobName",
       'DEADLINE' AS "eventType", '投递截止' AS "eventLabel", j.deadline || ' 23:59:59' AS "scheduledAt", j.location,
@@ -62,7 +62,7 @@ export async function listSchedule(days?: number) {
       CASE i.round WHEN 'FIRST' THEN '一面' WHEN 'SECOND' THEN '二面' WHEN 'THIRD' THEN '三面' WHEN 'HR' THEN 'HR 面' WHEN 'FINAL' THEN '终面' ELSE '其他面试' END,
       i.scheduled_at, i.location, 0,i.time_tbd
     FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id WHERE i.status IN ('WAITING','SCHEDULED')
-  ) events WHERE datetime("scheduledAt") >= datetime('now', 'localtime') ${limit}
+  ) events WHERE date("scheduledAt") >= date('now', 'localtime') ${limit}
   ORDER BY "applicationBlocked" ASC, datetime("scheduledAt") ASC`)
 }
 

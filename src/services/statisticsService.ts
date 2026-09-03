@@ -100,7 +100,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const upcoming = await select<ScheduleItem>(`SELECT * FROM (
     SELECT 'written-'||w.id AS id,j.id AS "jobId",c.company_name AS "companyName",j.job_name AS "jobName",'WRITTEN_TEST' AS "eventType",'第'||w.sequence_no||'次笔试' AS "eventLabel",w.scheduled_at AS "scheduledAt",w.location,w.time_tbd AS "timeTbd" FROM written_tests w JOIN jobs j ON j.id=w.job_id JOIN companies c ON c.id=j.company_id WHERE w.status IN ('WAITING','SCHEDULED')
     UNION ALL SELECT 'interview-'||i.id,j.id,c.company_name,j.job_name,'INTERVIEW',CASE i.round WHEN 'FIRST' THEN '一面' WHEN 'SECOND' THEN '二面' WHEN 'THIRD' THEN '三面' WHEN 'HR' THEN 'HR 面' WHEN 'FINAL' THEN '终面' ELSE '其他面试' END,i.scheduled_at,i.location,i.time_tbd FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id WHERE i.status IN ('WAITING','SCHEDULED')
-  ) WHERE datetime("scheduledAt") BETWEEN datetime('now','localtime') AND datetime('now','localtime','+14 day') ORDER BY datetime("scheduledAt") LIMIT 5`)
+  ) WHERE date("scheduledAt") BETWEEN date('now','localtime') AND date('now','localtime','+14 day') ORDER BY datetime("scheduledAt") LIMIT 5`)
   const locations = await select<{ name: string; value: number }>(`SELECT COALESCE(NULLIF(location,''),'未填写') AS name,COUNT(*) AS value FROM jobs GROUP BY COALESCE(NULLIF(location,''),'未填写') ORDER BY value DESC LIMIT 5`)
   const companyTypes = await select<{ name: string; value: number }>(`SELECT COALESCE(NULLIF(company_type,''),'未填写') AS name,COUNT(*) AS value FROM companies GROUP BY COALESCE(NULLIF(company_type,''),'未填写') ORDER BY value DESC`)
   return { totalJobs, effectiveOpportunities, stages, workflow, recentJobs, deadlineJobs, upcoming, locations, companyTypes }

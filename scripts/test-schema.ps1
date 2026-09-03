@@ -130,6 +130,16 @@ UPDATE applications SET stage='APPLIED',result='PENDING',result_reason=NULL WHER
 COMMIT;
 SELECT 'workflow-restored=' || a.stage || ',' || i.status || ',' || i.result
   FROM applications a JOIN jobs j ON j.id=a.job_id JOIN interviews i ON i.job_id=j.id WHERE j.job_name='workflow-job';
+
+INSERT INTO companies(company_name) VALUES('today-schedule-company');
+INSERT INTO jobs(company_id,job_name) VALUES((SELECT id FROM companies WHERE company_name='today-schedule-company'),'today-interview-job');
+INSERT INTO jobs(company_id,job_name) VALUES((SELECT id FROM companies WHERE company_name='today-schedule-company'),'today-written-job');
+INSERT INTO interviews(job_id,round,scheduled_at,status,result) VALUES((SELECT id FROM jobs WHERE job_name='today-interview-job'),'FIRST',datetime('now','localtime','-2 hour'),'SCHEDULED','PENDING');
+INSERT INTO written_tests(job_id,sequence_no,scheduled_at,status,result) VALUES((SELECT id FROM jobs WHERE job_name='today-written-job'),1,datetime('now','localtime','-2 hour'),'SCHEDULED','PENDING');
+SELECT 'today-upcoming=' || SUM("eventType"='INTERVIEW') || ',' || SUM("eventType"='WRITTEN_TEST') FROM (
+  SELECT 'INTERVIEW' AS "eventType",i.scheduled_at AS "scheduledAt" FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id WHERE c.company_name='today-schedule-company' AND i.status IN ('WAITING','SCHEDULED')
+  UNION ALL SELECT 'WRITTEN_TEST',w.scheduled_at FROM written_tests w JOIN jobs j ON j.id=w.job_id JOIN companies c ON c.id=j.company_id WHERE c.company_name='today-schedule-company' AND w.status IN ('WAITING','SCHEDULED')
+) WHERE date("scheduledAt") BETWEEN date('now','localtime') AND date('now','localtime','+14 day');
 '@
 
 $sql = ($statements -join ";`n") + ";`n" + $smokeSql
@@ -153,7 +163,7 @@ foreach ($line in $expected) {
   }
 }
 
-$workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed=REJECTED,FAILED,second-interview-failed','workflow-history=3','workflow-undone=PROCESS,PENDING,COMPLETED,PENDING','workflow-restored=APPLIED,CANCELLED,CANCELLED')
+$workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed=REJECTED,FAILED,second-interview-failed','workflow-history=3','workflow-undone=PROCESS,PENDING,COMPLETED,PENDING','workflow-restored=APPLIED,CANCELLED,CANCELLED','today-upcoming=1,1')
 foreach ($line in $workflowExpected) {
   if ($result -notcontains $line) {
     throw "Recruitment workflow acceptance test failed: expected $line"
