@@ -12,6 +12,7 @@ export async function saveInterview(input: InterviewInput, id?: number) {
   if (!id) return createInterview(input)
   const statements = [{ query: `UPDATE interviews SET round=?,scheduled_at=?,time_tbd=?,form=?,interview_type=?,location=?,meeting_url=?,interviewer=?,status=?,result=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, values: [input.round,input.scheduledAt,input.timeTbd?1:0,input.form,input.interviewType||null,input.location||null,input.meetingUrl||null,input.interviewer||null,input.status,input.result,input.notes||null,id] }]
   if (input.result === 'FAILED') statements.push({ query: "UPDATE applications SET stage='REJECTED',result='FAILED',result_reason='面试未通过',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", values: [input.jobId] })
+  else statements.push({ query: "UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='REJECTED' AND result_reason='面试未通过'", values: [input.jobId] })
   await transaction(statements)
 }
 

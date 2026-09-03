@@ -153,7 +153,8 @@ async function changeQuickStage(job: Job, nextStage: ApplicationStage) {
     try{await ElMessageBox.confirm(`企业：${job.companyName}\n岗位：${job.jobName}\n\n确认已收到后续流程通知？确认后请前往“招聘流程”安排具体笔试或面试。`,'进入面试/笔试',{type:'info',confirmButtonText:'确认进入',cancelButtonText:'取消',customClass:'multiline-message-box'})}catch{return}
     await enterProcess(job.id);ElMessage.success('已进入面试/笔试，请在招聘流程中安排具体节点')
   } else if(currentStage==='PROCESS'&&nextStage==='APPLIED'){
-    try{await restoreProcessToApplied(job.id);ElMessage.success('已恢复为已投递')}catch(error){await ElMessageBox.alert(error instanceof Error?error.message:'无法恢复','无法恢复',{type:'warning'});return}
+    try{await ElMessageBox.confirm('确认恢复为“已投递”吗？当前未完成、等待结果或误判为未通过的流程会改为“已取消”，已经完成并通过的历史不会删除。','恢复为已投递',{type:'warning',confirmButtonText:'确认恢复',cancelButtonText:'取消'})}catch{return}
+    try{await restoreProcessToApplied(job.id);ElMessage.success('已恢复为已投递，相关流程记录已同步处理')}catch(error){await ElMessageBox.alert(error instanceof Error?error.message:'无法恢复','无法恢复',{type:'warning'});return}
   } else if(currentStage==='APPLIED'&&nextStage==='TO_APPLY'){
     try {
       await ElMessageBox.confirm('该岗位已经记录为已投递。\n\n确认恢复为“待投递”吗？\n这将清除当前投递状态，但不会自动删除已经存在的笔试和面试记录。', '恢复为待投递', { confirmButtonText: '确认恢复', cancelButtonText: '取消', type: 'warning', customClass: 'multiline-message-box' })

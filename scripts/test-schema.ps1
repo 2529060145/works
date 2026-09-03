@@ -118,6 +118,18 @@ UPDATE applications SET stage='REJECTED',result='FAILED',result_reason='second-i
 COMMIT;
 SELECT 'workflow-failed=' || a.stage || ',' || a.result || ',' || a.result_reason FROM applications a JOIN jobs j ON j.id=a.job_id WHERE j.job_name='workflow-job';
 SELECT 'workflow-history=' || ((SELECT COUNT(*) FROM written_tests WHERE job_id=j.id)+(SELECT COUNT(*) FROM interviews WHERE job_id=j.id)) FROM jobs j WHERE j.job_name='workflow-job';
+BEGIN;
+UPDATE interviews SET status='COMPLETED',result='PENDING' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job') AND result='FAILED';
+UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job') AND stage='REJECTED';
+COMMIT;
+SELECT 'workflow-undone=' || a.stage || ',' || a.result || ',' || i.status || ',' || i.result
+  FROM applications a JOIN jobs j ON j.id=a.job_id JOIN interviews i ON i.job_id=j.id WHERE j.job_name='workflow-job';
+BEGIN;
+UPDATE interviews SET status='CANCELLED',result='CANCELLED' WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job') AND (status IN ('SCHEDULED','ONGOING') OR result IN ('PENDING','FAILED'));
+UPDATE applications SET stage='APPLIED',result='PENDING',result_reason=NULL WHERE job_id=(SELECT id FROM jobs WHERE job_name='workflow-job');
+COMMIT;
+SELECT 'workflow-restored=' || a.stage || ',' || i.status || ',' || i.result
+  FROM applications a JOIN jobs j ON j.id=a.job_id JOIN interviews i ON i.job_id=j.id WHERE j.job_name='workflow-job';
 '@
 
 $sql = ($statements -join ";`n") + ";`n" + $smokeSql
@@ -141,7 +153,7 @@ foreach ($line in $expected) {
   }
 }
 
-$workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed=REJECTED,FAILED,second-interview-failed','workflow-history=3')
+$workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed=REJECTED,FAILED,second-interview-failed','workflow-history=3','workflow-undone=PROCESS,PENDING,COMPLETED,PENDING','workflow-restored=APPLIED,CANCELLED,CANCELLED')
 foreach ($line in $workflowExpected) {
   if ($result -notcontains $line) {
     throw "Recruitment workflow acceptance test failed: expected $line"

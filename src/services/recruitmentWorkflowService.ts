@@ -27,7 +27,9 @@ export interface WorkflowNode {
 
 export interface WorkflowJob {
   jobId: number
+  companyId: number
   companyName: string
+  headquarters?: string
   jobName: string
   location?: string
   stage: ApplicationStage
@@ -101,8 +103,9 @@ export async function getWorkflowHistory(jobId: number) {
 }
 
 export function currentWorkflowNode(history: WorkflowNode[]) {
-  const active = [...history].reverse().find(node => node.status === 'PENDING_SCHEDULE' || node.status === 'SCHEDULED' || (node.status === 'COMPLETED' && node.result === 'PENDING'))
-  return active ?? history[history.length - 1]
+  const available = history.filter(node => node.status !== 'CANCELLED' && node.result !== 'CANCELLED')
+  const active = [...available].reverse().find(node => node.status === 'PENDING_SCHEDULE' || node.status === 'SCHEDULED' || (node.status === 'COMPLETED' && node.result === 'PENDING'))
+  return active ?? available[available.length - 1]
 }
 
 export function workflowAddState(stage: ApplicationStage, history: WorkflowNode[]) {
@@ -128,7 +131,7 @@ export async function getCurrentDetailedStage(jobId: number) {
 
 export async function listWorkflowJobs(): Promise<WorkflowJob[]> {
   const jobs = await select<Omit<WorkflowJob, 'history' | 'currentNode' | 'canAddNext' | 'nextBlockedReason'>>(`SELECT
-    j.id AS "jobId",c.company_name AS "companyName",j.job_name AS "jobName",j.location,a.stage,
+    j.id AS "jobId",c.id AS "companyId",c.company_name AS "companyName",c.headquarters,j.job_name AS "jobName",j.location,a.stage,
     a.application_date AS "applicationDate",a.submitted_at AS "submittedAt",a.result
     FROM applications a JOIN jobs j ON j.id=a.job_id JOIN companies c ON c.id=j.company_id
     WHERE a.stage IN ('PROCESS','OFFER','REJECTED','WITHDRAWN','UNSUITABLE') ORDER BY a.updated_at DESC`)
@@ -154,10 +157,22 @@ export async function enterProcess(jobId: number) {
 }
 
 export async function restoreProcessToApplied(jobId: number) {
-  const counts = await select<{ value: number }>(`SELECT
-    (SELECT COUNT(*) FROM written_tests WHERE job_id=?)+(SELECT COUNT(*) FROM interviews WHERE job_id=?) AS value`, [jobId, jobId])
-  if (Number(counts[0]?.value ?? 0) > 0) throw new Error('该岗位已经存在招聘流程记录，不能直接恢复为“已投递”。请先处理招聘流程记录。')
-  await transaction([{ query: "UPDATE applications SET stage='APPLIED',updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='PROCESS'", values: [jobId] }])
+  await transaction([
+    { query: `UPDATE written_tests SET status='CANCELLED',result='CANCELLED',updated_at=CURRENT_TIMESTAMP
+      WHERE job_id=? AND (status IN ('WAITING','PENDING_SCHEDULE','SCHEDULED') OR result IN ('PENDING','FAILED'))`, values: [jobId] },
+    { query: `UPDATE interviews SET status='CANCELLED',result='CANCELLED',updated_at=CURRENT_TIMESTAMP
+      WHERE job_id=? AND (status IN ('WAITING','PENDING_SCHEDULE','SCHEDULED') OR result IN ('PENDING','FAILED'))`, values: [jobId] },
+    { query: "UPDATE applications SET stage='APPLIED',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage IN ('PROCESS','REJECTED')", values: [jobId] },
+  ])
+}
+
+export async function undoWorkflowFailure(node: WorkflowNode) {
+  if (node.result !== 'FAILED') throw new Error('当前流程不是未通过状态，无需撤回')
+  const table = node.nodeType === 'WRITTEN_TEST' ? 'written_tests' : 'interviews'
+  await transaction([
+    { query: `UPDATE ${table} SET status='COMPLETED',result='PENDING',updated_at=CURRENT_TIMESTAMP WHERE id=? AND result='FAILED'`, values: [node.id] },
+    { query: "UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='REJECTED'", values: [node.jobId] },
+  ])
 }
 
 export async function createWrittenTest(input: WrittenWorkflowInput) {
