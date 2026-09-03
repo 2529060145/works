@@ -82,7 +82,7 @@ onMounted(async () => {
           <span><el-icon><component :is="column.icon" /></el-icon>{{ column.label }}</span>
           <div class="stage-header-actions">
             <b>{{ column.items.length }}</b>
-            <button type="button" class="expand-button" :title="expandedStage === column.stage ? `收起${column.label}` : `展开${column.label}`" :aria-label="expandedStage === column.stage ? `收起${column.label}` : `展开${column.label}`" :aria-expanded="String(expandedStage === column.stage)" @click="toggleStage(column.stage)">
+            <button type="button" class="expand-button" :title="expandedStage === column.stage ? `收起${column.label}` : `展开${column.label}`" :aria-label="expandedStage === column.stage ? `收起${column.label}` : `展开${column.label}`" :aria-expanded="expandedStage === column.stage ? 'true' : 'false'" @click="toggleStage(column.stage)">
               <el-icon><component :is="expandedStage === column.stage ? ArrowUpBold : ArrowDownBold" /></el-icon>
             </button>
           </div>
