@@ -5,13 +5,17 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     component: MainLayout,
-    redirect: '/dashboard',
+    redirect: '/home',
     children: [
       {
-        path: 'dashboard',
-        name: 'dashboard',
+        path: 'home',
+        name: 'home',
         component: () => import('../views/dashboard/DashboardView.vue'),
-        meta: { title: '首页 / 仪表盘' },
+        meta: { title: '首页' },
+      },
+      {
+        path: 'dashboard',
+        redirect: '/home',
       },
       {
         path: 'jobs',
@@ -105,7 +109,7 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+  { path: '/:pathMatch(.*)*', redirect: '/home' },
 ]
 
 const router = createRouter({

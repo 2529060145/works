@@ -7,9 +7,9 @@ import type { DashboardData } from '../../services/statisticsService'
 import { getDashboardData } from '../../services/statisticsService'
 import { isTauriRuntime } from '../../services/databaseService'
 
-const data=ref<DashboardData>({totalJobs:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
+const data=ref<DashboardData>({totalJobs:0,effectiveOpportunities:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 const maxStage=computed(()=>Math.max(1,...Object.values(data.value.stages))),maxLocation=computed(()=>Math.max(1,...data.value.locations.map(i=>i.value)))
-const applied=computed(()=>data.value.totalJobs-data.value.stages.TO_APPLY)
+const applied=computed(()=>Object.entries(data.value.stages).reduce((sum,[stage,value])=>stage==='TO_APPLY'?sum:sum+value,0))
 const offerRate=computed(()=>applied.value?Math.round(data.value.stages.OFFER/applied.value*100):0)
 onMounted(async()=>{if(isTauriRuntime())data.value=await getDashboardData()})
 </script>

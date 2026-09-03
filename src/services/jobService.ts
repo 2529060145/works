@@ -61,7 +61,7 @@ export async function listJobs(query: JobQuery = {}) {
   const items = await select<Job>(`SELECT ${jobColumns}, COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType",
     c.max_applications AS "maxApplications",
     (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
-      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
+      WHERE counted_job.company_id=c.id AND (counted_application.application_date IS NOT NULL OR COALESCE(counted_application.stage,'TO_APPLY')<>'TO_APPLY')) AS "companyAppliedCount"
     FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id
     WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize])
   return { items: items.map(decorateJobEligibility), total: Number(countRows[0]?.count ?? 0) }
@@ -97,7 +97,7 @@ export async function listJobLibrary(query: Omit<JobQuery, 'page' | 'pageSize'> 
   const jobs = await select<Job>(`SELECT ${jobColumns}, c.company_type AS "companyType", c.headquarters,
     COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType", c.max_applications AS "maxApplications",
     (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
-      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
+      WHERE counted_job.company_id=c.id AND (counted_application.application_date IS NOT NULL OR COALESCE(counted_application.stage,'TO_APPLY')<>'TO_APPLY')) AS "companyAppliedCount"
     FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id
     WHERE ${clauses.join(' AND ')} ORDER BY ${order}`, values)
   const decorated = jobs.map(decorateJobEligibility)
@@ -121,7 +121,7 @@ export async function getJob(id: number) {
   const rows = await select<Job>(`SELECT ${jobColumns}, COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType",
     c.max_applications AS "maxApplications",
     (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
-      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
+      WHERE counted_job.company_id=c.id AND (counted_application.application_date IS NOT NULL OR COALESCE(counted_application.stage,'TO_APPLY')<>'TO_APPLY')) AS "companyAppliedCount"
     FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE j.id=?`, [id])
   return rows[0] ? decorateJobEligibility(rows[0]) : null
 }

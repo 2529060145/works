@@ -49,7 +49,8 @@ export async function listSchedule(days?: number) {
       'DEADLINE' AS "eventType", '投递截止' AS "eventLabel", j.deadline || ' 23:59:59' AS "scheduledAt", j.location,
       CASE WHEN COALESCE(a.stage,'TO_APPLY')='TO_APPLY' AND COALESCE(c.application_limit_type,'UNKNOWN')='LIMITED'
         AND (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
-          WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) >= COALESCE(c.max_applications,1)
+          WHERE counted_job.company_id=c.id AND (counted_application.application_date IS NOT NULL
+            OR COALESCE(counted_application.stage,'TO_APPLY')<>'TO_APPLY')) >= COALESCE(c.max_applications,1)
         THEN 1 ELSE 0 END AS "applicationBlocked"
     FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE j.deadline IS NOT NULL
     UNION ALL

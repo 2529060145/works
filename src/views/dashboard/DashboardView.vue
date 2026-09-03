@@ -31,12 +31,12 @@ const router=useRouter(),loading=ref(false),companyDialog=ref<InstanceType<typeo
 const dashboardPage=ref<HTMLElement>()
 const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyChart=ref<HTMLElement>(),trendChart=ref<HTMLElement>()
 const trendRange=ref<JobTrendDays>(30),trendData=ref<JobTrendPoint[]>([])
-const data=ref<DashboardData>({totalJobs:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
+const data=ref<DashboardData>({totalJobs:0,effectiveOpportunities:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 let chartInstances:ECharts[]=[]
 let resizeObserver:ResizeObserver|undefined
 const stats=computed(()=>[
-  { title:'岗位总数',value:data.value.totalJobs,description:'全部岗位',tone:'primary' as const,icon:Briefcase },
-  { title:'待投递',value:data.value.stages.TO_APPLY,description:'仍具备投递资格',tone:'primary' as const,icon:Promotion },
+  { title:'收录岗位',value:data.value.totalJobs,description:'全部收录',tone:'primary' as const,icon:Briefcase },
+  { title:'有效机会',value:data.value.effectiveOpportunities,description:'当前可投名额',tone:'primary' as const,icon:Promotion },
   { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'teal' as const,icon:CircleCheck },
   { title:'笔试',value:data.value.stages.WRITTEN_TEST,description:'进入笔试流程',tone:'purple' as const,icon:Document },
   { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'warning' as const,icon:User },
@@ -59,10 +59,10 @@ function renderTrend(){
   const colors={added:'#4F6FEA',submitted:'#43BFAE',pending:'#F5B84B'}
   const interval=trendRange.value===7?0:trendRange.value===30?4:12
   const series=(name:string,key:keyof JobTrendPoint,color:string)=>({name,type:'line',smooth:.3,showSymbol:false,symbol:'circle',symbolSize:7,lineStyle:{width:2.4,color},itemStyle:{color},areaStyle:{color,opacity:.07},data:trendData.value.map(item=>item[key])})
-  chart.setOption({animationDuration:350,color:Object.values(colors),tooltip:{trigger:'axis',backgroundColor:'rgba(255,255,255,.97)',borderColor:'#E8ECF3',textStyle:{color:'#172033'},formatter:(params:any[])=>{const index=params[0]?.dataIndex??0;const point=trendData.value[index];const current=index===trendData.value.length-1?`<br/><span style="color:#7B879D">当前有效待投递：${data.value.stages.TO_APPLY}</span>`:'';return `<strong>${point.date}</strong><br/>新增岗位　${point.addedJobs}<br/>新投递岗位　${point.submittedJobs}<br/>未投递岗位　${point.pendingJobs}${current}`}},legend:{top:4,left:8,itemWidth:16,itemHeight:8,itemGap:22,textStyle:{color:'#52617A',fontSize:13}},grid:{left:32,right:22,top:58,bottom:26,containLabel:true},xAxis:{type:'category',boundaryGap:false,data:trendData.value.map(item=>item.date),axisTick:{show:false},axisLine:{lineStyle:{color:'#DCE2ED'}},axisLabel:{interval,formatter:(value:string)=>value.slice(5),color:'#7B879D'}},yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#7B879D'},axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:'#EEF1F6'}}},series:[series('新添加岗位','addedJobs',colors.added),series('新投递岗位','submittedJobs',colors.submitted),series('未投递岗位','pendingJobs',colors.pending)]})
+  chart.setOption({animationDuration:350,color:Object.values(colors),tooltip:{trigger:'axis',backgroundColor:'rgba(255,255,255,.97)',borderColor:'#E8ECF3',textStyle:{color:'#172033'},formatter:(params:any[])=>{const index=params[0]?.dataIndex??0;const point=trendData.value[index];const current=index===trendData.value.length-1?`<br/><span style="color:#7B879D">当前有效机会：${data.value.effectiveOpportunities}</span>`:'';return `<strong>${point.date}</strong><br/>新增岗位　${point.addedJobs}<br/>新投递岗位　${point.submittedJobs}<br/>有效机会　${point.pendingJobs}${current}`}},legend:{top:4,left:8,itemWidth:16,itemHeight:8,itemGap:22,textStyle:{color:'#52617A',fontSize:13}},grid:{left:32,right:22,top:58,bottom:26,containLabel:true},xAxis:{type:'category',boundaryGap:false,data:trendData.value.map(item=>item.date),axisTick:{show:false},axisLine:{lineStyle:{color:'#DCE2ED'}},axisLabel:{interval,formatter:(value:string)=>value.slice(5),color:'#7B879D'}},yAxis:{type:'value',min:0,minInterval:1,axisLabel:{color:'#7B879D'},axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:'#EEF1F6'}}},series:[series('新添加岗位','addedJobs',colors.added),series('新投递岗位','submittedJobs',colors.submitted),series('有效机会','pendingJobs',colors.pending)]})
 }
 async function loadTrend(){if(!isTauriRuntime())return;try{trendData.value=await getJobTrend(trendRange.value);await nextTick();renderTrend()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取求职趋势失败')}}
-async function load(){if(!isTauriRuntime())return;loading.value=true;try{const [dashboard,trend]=await Promise.all([getDashboardData(),getJobTrend(trendRange.value)]);data.value=dashboard;trendData.value=trend;await nextTick();renderCharts()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取仪表盘失败')}finally{loading.value=false}}
+async function load(){if(!isTauriRuntime())return;loading.value=true;try{const [dashboard,trend]=await Promise.all([getDashboardData(),getJobTrend(trendRange.value)]);data.value=dashboard;trendData.value=trend;await nextTick();renderCharts()}catch(e){ElMessage.error(e instanceof Error?e.message:'读取首页失败')}finally{loading.value=false}}
 function resizeCharts(){chartInstances.forEach(i=>i.resize())}
 onMounted(()=>{load();window.addEventListener('resize',resizeCharts);resizeObserver=new ResizeObserver(resizeCharts);if(dashboardPage.value)resizeObserver.observe(dashboardPage.value)})
 onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);resizeObserver?.disconnect();chartInstances.forEach(i=>i.dispose())})
@@ -70,7 +70,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);resizeObs
 
 <template>
   <div ref="dashboardPage" v-loading="loading" class="dashboard-page">
-    <el-alert v-if="!isTauriRuntime()" title="当前为界面预览。安装并启动 Windows 客户端后，仪表盘会显示本机 SQLite 数据。" type="info" show-icon :closable="false" />
+    <el-alert v-if="!isTauriRuntime()" title="当前为界面预览。安装并启动 Windows 客户端后，首页会显示本机 SQLite 数据。" type="info" show-icon :closable="false" />
     <section class="welcome-band">
       <div class="welcome-copy">
         <div class="desktop-badges">
@@ -172,7 +172,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);resizeObs
       <div class="panel-head">
         <div>
           <h2>求职趋势</h2>
-          <p>岗位新增、投递与待投递变化</p>
+          <p>岗位新增、投递与有效机会变化</p>
         </div>
         <el-segmented v-model="trendRange" :options="[{label:'7 天',value:7},{label:'30 天',value:30},{label:'90 天',value:90}]" @change="loadTrend" />
       </div>

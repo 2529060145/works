@@ -12,7 +12,7 @@ export async function listCompanies(keyword = ''): Promise<(Company & { jobCount
   return select<Company & { jobCount: number; appliedCount: number }>(
     `SELECT ${companyColumns}, (SELECT COUNT(*) FROM jobs j WHERE j.company_id = companies.id) AS "jobCount",
       (SELECT COUNT(*) FROM jobs j JOIN applications a ON a.job_id=j.id
-        WHERE j.company_id=companies.id AND a.application_date IS NOT NULL) AS "appliedCount"
+        WHERE j.company_id=companies.id AND (a.application_date IS NOT NULL OR COALESCE(a.stage,'TO_APPLY')<>'TO_APPLY')) AS "appliedCount"
      FROM companies WHERE company_name LIKE ? OR headquarters LIKE ? OR company_type LIKE ?
      ORDER BY updated_at DESC`,
     [value, value, value],

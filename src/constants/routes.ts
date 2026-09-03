@@ -22,7 +22,7 @@ export interface NavItem {
 }
 
 export const primaryNavItems: NavItem[] = [
-  { path: '/dashboard', label: '首页 / 仪表盘', icon: House },
+  { path: '/home', label: '首页', icon: House },
   { path: '/jobs', label: '岗位库', icon: Briefcase },
   { path: '/companies', label: '企业管理', icon: OfficeBuilding },
   { path: '/progress', label: '投递进度', icon: SuitcaseLine },

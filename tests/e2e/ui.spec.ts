@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 const routes = [
-  ['/dashboard', '今天是'], ['/jobs', '岗位库'], ['/companies', '企业管理'], ['/progress', '投递进度'],
+  ['/home', '今天是'], ['/jobs', '岗位库'], ['/companies', '企业管理'], ['/progress', '投递进度'],
   ['/schedule', '日程安排'], ['/written-tests', '笔试管理'], ['/interviews', '面试管理'],
   ['/statistics', '数据统计'], ['/tags', '标签管理'], ['/reminders', '提醒中心'],
   ['/data/import', 'Excel 导入'], ['/data/export', 'Excel 导出'], ['/data/backup', '备份与恢复'], ['/settings', '系统设置'],
@@ -13,14 +13,24 @@ test('all application routes render without runtime errors', async ({ page }) =>
   page.on('pageerror', error => errors.push(error.message))
   for (const [path, text] of routes) {
     await page.goto(path)
-    if (path === '/dashboard') await expect(page.getByText(text, { exact: false }).first()).toBeVisible()
+    if (path === '/home') await expect(page.getByText(text, { exact: false }).first()).toBeVisible()
     else await expect(page.getByRole('heading', { name: text, exact: true })).toBeVisible()
   }
   expect(errors).toEqual([])
 })
 
-test('header search, navigation and theme controls work', async ({ page }) => {
+test('home naming is consistent and the legacy dashboard route redirects', async ({ page }) => {
   await page.goto('/dashboard')
+  await expect(page).toHaveURL(/\/home$/)
+  await expect(page.getByRole('button', { name: '首页', exact: true })).toBeVisible()
+  await expect(page.getByText('收录岗位', { exact: true })).toBeVisible()
+  await expect(page.getByText('有效机会', { exact: true })).toBeVisible()
+  await expect(page.getByText(/仪表盘|Dashboard/)).toHaveCount(0)
+  await expect(page).toHaveTitle('首页 - 求职投递管理')
+})
+
+test('header search, navigation and theme controls work', async ({ page }) => {
+  await page.goto('/home')
   const search = page.getByPlaceholder('搜索企业、岗位、地点...')
   await search.fill('软件开发')
   await search.press('Enter')
@@ -69,7 +79,7 @@ test('schedule renders month calendar controls and dashboard exposes trend range
   await expect(page.getByTitle('下一个月')).toBeVisible()
   expect(await page.locator('.day-cell').count()).toBeGreaterThanOrEqual(35)
 
-  await page.goto('/dashboard')
+  await page.goto('/home')
   await expect(page.getByText('求职趋势', { exact: true })).toBeVisible()
   await expect(page.getByText('7 天', { exact: true })).toBeVisible()
   await expect(page.getByText('30 天', { exact: true })).toBeVisible()
@@ -122,7 +132,7 @@ test('job library exposes grouped management controls', async ({ page }) => {
 test('desktop layouts do not overflow horizontally', async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 1050, height: 800 }]) {
     await page.setViewportSize(viewport)
-    for (const path of ['/dashboard', '/jobs', '/progress', '/settings']) {
+    for (const path of ['/home', '/jobs', '/progress', '/settings']) {
       await page.goto(path)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
       expect(overflow, `${path} overflows at ${viewport.width}px`).toBeFalsy()
@@ -132,7 +142,7 @@ test('desktop layouts do not overflow horizontally', async ({ page }) => {
 
 test('page content and long dialogs scroll vertically', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
-  await page.goto('/dashboard')
+  await page.goto('/home')
   const content = page.locator('.app-content')
   expect(await content.evaluate(element => element.scrollHeight)).toBeGreaterThan(
     await content.evaluate(element => element.clientHeight),

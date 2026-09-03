@@ -72,6 +72,28 @@ SELECT 'case9=' || COUNT(*) FROM jobs j JOIN companies c ON c.id=j.company_id JO
 SELECT 'case10=' || COUNT(*) FROM jobs j JOIN companies c ON c.id=j.company_id JOIN applications a ON a.job_id=j.id
   WHERE a.stage='TO_APPLY' AND (c.application_limit_type<>'LIMITED' OR
     (SELECT COUNT(*) FROM jobs j2 JOIN applications a2 ON a2.job_id=j2.id WHERE j2.company_id=c.id AND a2.application_date IS NOT NULL)<c.max_applications);
+SELECT 'case11=' || COALESCE(SUM(
+  CASE WHEN company.limit_type='LIMITED'
+    THEN MIN(company.pending_count,MAX(0,company.max_applications-company.applied_count))
+    ELSE company.pending_count END),0)
+FROM (
+  SELECT c.id,c.application_limit_type AS limit_type,COALESCE(c.max_applications,1) AS max_applications,
+    SUM(CASE WHEN j.id IS NOT NULL AND COALESCE(a.stage,'TO_APPLY')='TO_APPLY' THEN 1 ELSE 0 END) AS pending_count,
+    SUM(CASE WHEN j.id IS NOT NULL AND (a.application_date IS NOT NULL OR COALESCE(a.stage,'TO_APPLY')<>'TO_APPLY') THEN 1 ELSE 0 END) AS applied_count
+  FROM companies c LEFT JOIN jobs j ON j.company_id=c.id LEFT JOIN applications a ON a.job_id=j.id
+  WHERE c.company_name='limit-one' GROUP BY c.id,c.application_limit_type,c.max_applications
+) company;
+SELECT 'case12=' || COALESCE(SUM(
+  CASE WHEN company.limit_type='LIMITED'
+    THEN MIN(company.pending_count,MAX(0,company.max_applications-company.applied_count))
+    ELSE company.pending_count END),0)
+FROM (
+  SELECT c.id,c.application_limit_type AS limit_type,COALESCE(c.max_applications,1) AS max_applications,
+    SUM(CASE WHEN j.id IS NOT NULL AND COALESCE(a.stage,'TO_APPLY')='TO_APPLY' THEN 1 ELSE 0 END) AS pending_count,
+    SUM(CASE WHEN j.id IS NOT NULL AND (a.application_date IS NOT NULL OR COALESCE(a.stage,'TO_APPLY')<>'TO_APPLY') THEN 1 ELSE 0 END) AS applied_count
+  FROM companies c LEFT JOIN jobs j ON j.company_id=c.id LEFT JOIN applications a ON a.job_id=j.id
+  GROUP BY c.id,c.application_limit_type,c.max_applications
+) company;
 '@
 
 $sql = ($statements -join ";`n") + ";`n" + $smokeSql
@@ -88,7 +110,7 @@ if ($result -notcontains 'reason=FAILED,written-test-failed') {
   throw 'Application result reason smoke test failed.'
 }
 
-$expected = @('case1=5','case2=0','case3=4','case4=2','case5=0','case6=2','case7=2','case8=blocked','case9=5','case10=9')
+$expected = @('case1=5','case2=0','case3=4','case4=2','case5=0','case6=2','case7=2','case8=blocked','case9=5','case10=9','case11=1','case12=5')
 foreach ($line in $expected) {
   if ($result -notcontains $line) {
     throw "Application limit acceptance test failed: expected $line"
