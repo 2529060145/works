@@ -27,6 +27,8 @@ PRAGMA foreign_keys=ON;
 INSERT INTO companies(company_name) VALUES('test-company');
 INSERT INTO jobs(company_id,job_name,recruitment_count) VALUES(1,'test-job',1);
 INSERT INTO applications(job_id,stage,result) VALUES(1,'APPLIED','PENDING');
+UPDATE applications SET result='FAILED',result_reason='written-test-failed' WHERE job_id=1;
+SELECT 'reason=' || result || ',' || result_reason FROM applications WHERE job_id=1;
 SELECT 'before=' || (SELECT COUNT(*) FROM jobs) || ',' || (SELECT COUNT(*) FROM applications);
 DELETE FROM companies WHERE id=1;
 SELECT 'after=' || (SELECT COUNT(*) FROM jobs) || ',' || (SELECT COUNT(*) FROM applications);
@@ -81,6 +83,9 @@ if ($LASTEXITCODE -ne 0) {
 $result
 if ($result -notcontains 'before=1,1' -or $result -notcontains 'after=0,0') {
   throw 'SQLite foreign-key cascade smoke test failed.'
+}
+if ($result -notcontains 'reason=FAILED,written-test-failed') {
+  throw 'Application result reason smoke test failed.'
 }
 
 $expected = @('case1=5','case2=0','case3=4','case4=2','case5=0','case6=2','case7=2','case8=blocked','case9=5','case10=9')

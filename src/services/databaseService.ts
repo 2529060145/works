@@ -70,6 +70,7 @@ const migrations = [
     stage TEXT NOT NULL DEFAULT 'TO_APPLY',
     application_date TEXT,
     result TEXT NOT NULL DEFAULT 'PENDING',
+    result_reason TEXT,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -150,6 +151,10 @@ export async function initializeDatabase() {
   }
   if (!existingCompanyColumns.has('max_applications')) {
     await database.execute('ALTER TABLE companies ADD COLUMN max_applications INTEGER')
+  }
+  const applicationColumns = await database.select<{ name: string }[]>('PRAGMA table_info(applications)')
+  if (!applicationColumns.some(column => column.name === 'result_reason')) {
+    await database.execute('ALTER TABLE applications ADD COLUMN result_reason TEXT')
   }
   await database.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)', [1])
   for (const [name, color] of [

@@ -8,7 +8,15 @@ export type ApplicationStage =
   | 'WITHDRAWN'
   | 'UNSUITABLE'
 
-export type ApplicationResult = 'PENDING' | 'PASSED' | 'FAILED' | 'OFFER' | 'WITHDRAWN' | 'UNSUITABLE'
+export type ApplicationResult =
+  | 'PENDING'
+  | 'PASSED'
+  | 'FAILED'
+  | 'OFFER'
+  | 'WITHDRAWN'
+  | 'JOB_CANCELLED'
+  | 'COMPANY_TERMINATED'
+  | 'UNSUITABLE'
 
 export interface Application {
   id: number
@@ -20,6 +28,7 @@ export interface Application {
   stage: ApplicationStage
   applicationDate?: string
   result: ApplicationResult
+  resultReason?: string
   notes?: string
   createdAt: string
   updatedAt: string
@@ -30,5 +39,6 @@ export interface ApplicationInput {
   stage: ApplicationStage
   applicationDate?: string
   result: ApplicationResult
+  resultReason?: string
   notes?: string
 }

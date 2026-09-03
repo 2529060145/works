@@ -21,6 +21,8 @@ export interface Job {
   updatedAt: string
   stage?: import('./application').ApplicationStage
   applicationDate?: string
+  result?: import('./application').ApplicationResult
+  resultReason?: string
   companyType?: string
   headquarters?: string
   applicationLimitType?: import('./company').ApplicationLimitType
@@ -30,4 +32,4 @@ export interface Job {
   applicationBlocked?: boolean
 }
 
-export type JobInput = Omit<Job, 'id' | 'companyName' | 'companyType' | 'headquarters' | 'applicationLimitType' | 'maxApplications' | 'companyAppliedCount' | 'remainingSlots' | 'applicationBlocked' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate'>
+export type JobInput = Omit<Job, 'id' | 'companyName' | 'companyType' | 'headquarters' | 'applicationLimitType' | 'maxApplications' | 'companyAppliedCount' | 'remainingSlots' | 'applicationBlocked' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate' | 'result' | 'resultReason'>

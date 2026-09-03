@@ -17,7 +17,20 @@ export const applicationResultLabels: Record<ApplicationResult, string> = {
   FAILED: '未通过',
   OFFER: 'Offer',
   WITHDRAWN: '主动放弃',
+  JOB_CANCELLED: '岗位取消',
+  COMPANY_TERMINATED: '企业终止招聘',
   UNSUITABLE: '不合适',
+}
+
+export const jobLibraryResultOptions = ([
+  'PENDING', 'PASSED', 'FAILED', 'WITHDRAWN', 'JOB_CANCELLED', 'COMPANY_TERMINATED', 'UNSUITABLE',
+] as ApplicationResult[]).map(value => ({ value, label: applicationResultLabels[value] }))
+
+export function resultTone(result?: ApplicationResult): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'teal' {
+  if (result === 'PASSED' || result === 'OFFER') return 'success'
+  if (result === 'PENDING') return 'teal'
+  if (result === 'FAILED' || result === 'JOB_CANCELLED' || result === 'COMPANY_TERMINATED') return 'danger'
+  return 'info'
 }
 
 export const applicationStageOptions = Object.entries(applicationStageLabels).map(([value, label]) => ({

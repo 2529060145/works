@@ -8,13 +8,13 @@ import PageHeader from '../../components/common/PageHeader.vue'
 import StatusTag from '../../components/common/StatusTag.vue'
 import JobDialog from '../../dialogs/JobDialog.vue'
 import type { Job } from '../../types/job'
-import type { ApplicationStage } from '../../types/application'
+import type { ApplicationResult, ApplicationStage } from '../../types/application'
 import type { ApplicationLimitType } from '../../types/company'
-import { applicationStageLabels, applicationStageOptions, stageTone } from '../../constants/status'
+import { applicationResultLabels, applicationStageLabels, applicationStageOptions, jobLibraryResultOptions, resultTone, stageTone } from '../../constants/status'
 import { deleteJob, listJobLibrary, listJobLibraryOptions } from '../../services/jobService'
 import { isTauriRuntime } from '../../services/databaseService'
 import { openWebLink } from '../../utils/link'
-import { markJobApplied, restoreJobToPending } from '../../services/applicationService'
+import { markJobApplied, restoreJobToPending, updateApplicationResult } from '../../services/applicationService'
 
 interface CompanyGroup {
   companyId: number
@@ -158,6 +158,35 @@ async function changeQuickStage(job: Job, nextStage: ApplicationStage) {
   await load()
 }
 
+async function changeResult(job: Job, nextResult: ApplicationResult) {
+  const currentResult = job.result ?? 'PENDING'
+  if (nextResult === currentResult) return
+  let resultReason: string | undefined
+  if (nextResult === 'FAILED') {
+    try {
+      const response = await ElMessageBox.prompt(
+        `企业：${job.companyName}\n岗位：${job.jobName}\n\n请填写该岗位未通过的具体原因。`,
+        '填写未通过原因',
+        {
+          confirmButtonText: '保存结果', cancelButtonText: '取消', inputType: 'textarea',
+          inputValue: currentResult === 'FAILED' ? job.resultReason ?? '' : '',
+          inputPlaceholder: '例如：专业不匹配、笔试未通过、面试反馈不足',
+          inputValidator: (value: string) => value.trim() ? true : '请填写未通过原因',
+          customClass: 'multiline-message-box result-reason-message-box',
+        },
+      )
+      resultReason = response.value.trim()
+    } catch { return }
+  }
+  try {
+    await updateApplicationResult(job.id, nextResult, resultReason)
+    ElMessage.success(`投递结果已更新为“${applicationResultLabels[nextResult]}”`)
+    await load()
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '更新投递结果失败')
+  }
+}
+
 async function remove(row: Job) {
   await ElMessageBox.confirm(`确定删除“${row.companyName} · ${row.jobName}”吗？相关投递和日程也会删除。`, '删除岗位', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
   await deleteJob(row.id)
@@ -212,7 +241,7 @@ watch(() => route.query.q, value => {
     </section>
 
     <section v-loading="loading" class="library-table">
-      <div class="table-head job-grid"><span>企业信息</span><span>岗位信息</span><span>招聘批次</span><span>阶段</span><span>薪资</span><span>截止日期</span><span>投递资格</span><span>操作</span></div>
+      <div class="table-head job-grid"><span>企业信息</span><span>岗位信息</span><span>招聘批次</span><span>阶段</span><span>薪资</span><span>截止日期</span><span>投递结果</span><span>操作</span></div>
 
       <template v-if="pagedGroups.length">
         <article v-for="group in pagedGroups" :key="group.companyId" class="company-group">
@@ -247,7 +276,16 @@ watch(() => route.query.q, value => {
               </div>
               <span>{{ job.salaryText || '未明确' }}</span>
               <span class="deadline" :class="{ empty: !job.deadline }">{{ job.deadline || '未明确' }}</span>
-              <div><StatusTag v-if="job.applicationBlocked" type="info">已达企业上限</StatusTag><StatusTag v-else-if="(job.stage ?? 'TO_APPLY') === 'TO_APPLY'" type="success">可投递</StatusTag><span v-else class="muted-cell">已投递过</span></div>
+              <div class="result-cell">
+                <StatusTag v-if="!job.applicationDate" type="info">尚未投递</StatusTag>
+                <StatusTag v-else-if="job.stage === 'OFFER'" type="success">Offer</StatusTag>
+                <el-tooltip v-else :disabled="!job.resultReason" :content="job.resultReason" placement="top">
+                  <el-select :model-value="job.result ?? 'PENDING'" size="small" :class="['result-select', `result-${resultTone(job.result)}`]" @change="changeResult(job, $event as ApplicationResult)">
+                    <el-option v-for="option in jobLibraryResultOptions" :key="option.value" :label="option.label" :value="option.value" />
+                  </el-select>
+                </el-tooltip>
+                <small v-if="job.result === 'FAILED' && job.resultReason" class="result-reason">{{ job.resultReason }}</small>
+              </div>
               <div class="row-actions">
                 <el-button :icon="View" plain type="primary" @click="router.push(`/jobs/${job.id}`)">查看</el-button>
                 <el-dropdown trigger="click" @command="handleCommand($event, job)">
@@ -274,7 +312,7 @@ watch(() => route.query.q, value => {
 </template>
 
 <style scoped lang="scss">
-.jobs-page{container-type:inline-size}.page-stack{display:grid;gap:14px}.header-actions{display:flex;align-items:center;gap:8px}.header-actions .el-button+.el-button{margin-left:0}.filter-panel{border-bottom:1px solid var(--border-color);padding-bottom:14px}.filters{display:grid;grid-template-columns:minmax(250px,1.7fr) repeat(4,minmax(118px,.75fr)) auto;gap:10px}.advanced-filters{display:flex;align-items:center;gap:14px;padding:12px 2px 0;color:var(--text-secondary);font-size:13px}.library-table{min-height:360px;overflow:hidden;border:1px solid var(--border-color);border-radius:var(--radius-large);background:var(--bg-card);box-shadow:var(--shadow-card)}.job-grid{display:grid;grid-template-columns:minmax(250px,1.65fr) minmax(165px,1.1fr) 100px 105px 88px 100px 116px 126px;align-items:center;column-gap:10px}.table-head{min-height:48px;padding:0 18px;color:var(--text-secondary);background:color-mix(in srgb,var(--primary) 4%,var(--bg-card));font-size:13px;font-weight:700}.company-group+.company-group{border-top:7px solid var(--bg-page)}.company-row{min-height:90px;padding:0 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 160ms ease}.company-row:hover{background:color-mix(in srgb,var(--primary) 3%,var(--bg-card))}.company-info{display:flex;min-width:0;align-items:center;gap:14px}.company-logo{display:grid;width:48px;height:48px;flex:0 0 48px;place-items:center;overflow:hidden;border:1px solid color-mix(in srgb,var(--primary) 18%,var(--border-color));border-radius:8px;color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--bg-card));font-size:13px;font-weight:800}.company-copy{min-width:0}.company-name-line{display:flex;min-width:0;align-items:center;gap:9px}.company-name-line strong{overflow:hidden;color:var(--text-primary);font-size:15px;text-overflow:ellipsis;white-space:nowrap}.company-type{flex:none;border-radius:5px;padding:3px 7px;color:var(--info);background:color-mix(in srgb,var(--info) 10%,transparent);font-size:11px;font-weight:700}.company-region,.job-count,.muted-cell{color:var(--text-secondary)}.company-region{flex:none;font-size:12px}.job-count{display:block;margin-top:6px;font-size:12px}.stage-summary{display:flex;grid-column:2/8;flex-wrap:wrap;align-items:center;gap:7px}.stage-count,.limit-summary{border-radius:999px;padding:5px 9px;font-size:12px;font-weight:600}.stage-count b{margin-left:3px}.stage-to_apply{color:var(--primary);background:color-mix(in srgb,var(--primary) 13%,transparent)}.stage-applied{color:#238f82;background:color-mix(in srgb,var(--teal) 15%,transparent)}.stage-written_test{color:#6d5bd0;background:color-mix(in srgb,var(--purple) 14%,transparent)}.stage-interview{color:#a46d00;background:color-mix(in srgb,var(--warning) 18%,transparent)}.stage-offer{color:#168353;background:color-mix(in srgb,var(--success) 14%,transparent)}.limit-summary{color:var(--text-secondary);background:var(--bg-page)}.limit-summary.reached{color:#b84e4b;background:color-mix(in srgb,var(--danger) 12%,transparent)}.limit-summary.available{color:#168353;background:color-mix(in srgb,var(--success) 12%,transparent)}.company-actions{display:flex;justify-content:flex-end;gap:4px}.company-actions .el-button+.el-button{margin-left:0}.job-row{min-height:58px;padding:0 18px;border-bottom:1px solid var(--border-color);font-size:13px}.job-row:last-child{border-bottom:0}.job-row:hover{background:color-mix(in srgb,var(--primary) 4%,var(--bg-card))}.job-title{display:flex;min-width:0;align-items:center;overflow:hidden;color:var(--text-primary);text-overflow:ellipsis;white-space:nowrap}.tree-line{width:20px;height:1px;flex:0 0 20px;margin-right:6px;background:var(--border-color)}.deadline{width:fit-content;border-radius:6px;padding:4px 7px;color:var(--text-secondary);background:var(--bg-page);font-size:12px}.deadline.empty{color:var(--text-tertiary)}.stage-select{width:96px}.row-actions{display:flex;justify-content:flex-end;gap:8px}.row-actions .el-button+.el-button{margin-left:0}.table-footer{display:flex;align-items:center;justify-content:space-between;color:var(--text-secondary);font-size:13px}.pagination-controls{display:flex;align-items:center;gap:12px}.pagination-controls .el-select{width:112px}.empty-state{min-height:360px}
+.jobs-page{container-type:inline-size}.page-stack{display:grid;gap:14px}.header-actions{display:flex;align-items:center;gap:8px}.header-actions .el-button+.el-button{margin-left:0}.filter-panel{border-bottom:1px solid var(--border-color);padding-bottom:14px}.filters{display:grid;grid-template-columns:minmax(250px,1.7fr) repeat(4,minmax(118px,.75fr)) auto;gap:10px}.advanced-filters{display:flex;align-items:center;gap:14px;padding:12px 2px 0;color:var(--text-secondary);font-size:13px}.library-table{min-height:360px;overflow:hidden;border:1px solid var(--border-color);border-radius:var(--radius-large);background:var(--bg-card);box-shadow:var(--shadow-card)}.job-grid{display:grid;grid-template-columns:minmax(250px,1.65fr) minmax(165px,1.1fr) 100px 105px 88px 100px 132px 126px;align-items:center;column-gap:10px}.table-head{min-height:48px;padding:0 18px;color:var(--text-secondary);background:color-mix(in srgb,var(--primary) 4%,var(--bg-card));font-size:13px;font-weight:700}.company-group+.company-group{border-top:7px solid var(--bg-page)}.company-row{min-height:90px;padding:0 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 160ms ease}.company-row:hover{background:color-mix(in srgb,var(--primary) 3%,var(--bg-card))}.company-info{display:flex;min-width:0;align-items:center;gap:14px}.company-logo{display:grid;width:48px;height:48px;flex:0 0 48px;place-items:center;overflow:hidden;border:1px solid color-mix(in srgb,var(--primary) 18%,var(--border-color));border-radius:8px;color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--bg-card));font-size:13px;font-weight:800}.company-copy{min-width:0}.company-name-line{display:flex;min-width:0;align-items:center;gap:9px}.company-name-line strong{overflow:hidden;color:var(--text-primary);font-size:15px;text-overflow:ellipsis;white-space:nowrap}.company-type{flex:none;border-radius:5px;padding:3px 7px;color:var(--info);background:color-mix(in srgb,var(--info) 10%,transparent);font-size:11px;font-weight:700}.company-region,.job-count,.muted-cell{color:var(--text-secondary)}.company-region{flex:none;font-size:12px}.job-count{display:block;margin-top:6px;font-size:12px}.stage-summary{display:flex;grid-column:2/8;flex-wrap:wrap;align-items:center;gap:7px}.stage-count,.limit-summary{border-radius:999px;padding:5px 9px;font-size:12px;font-weight:600}.stage-count b{margin-left:3px}.stage-to_apply{color:var(--primary);background:color-mix(in srgb,var(--primary) 13%,transparent)}.stage-applied{color:#238f82;background:color-mix(in srgb,var(--teal) 15%,transparent)}.stage-written_test{color:#6d5bd0;background:color-mix(in srgb,var(--purple) 14%,transparent)}.stage-interview{color:#a46d00;background:color-mix(in srgb,var(--warning) 18%,transparent)}.stage-offer{color:#168353;background:color-mix(in srgb,var(--success) 14%,transparent)}.limit-summary{color:var(--text-secondary);background:var(--bg-page)}.limit-summary.reached{color:#b84e4b;background:color-mix(in srgb,var(--danger) 12%,transparent)}.limit-summary.available{color:#168353;background:color-mix(in srgb,var(--success) 12%,transparent)}.company-actions{display:flex;justify-content:flex-end;gap:4px}.company-actions .el-button+.el-button{margin-left:0}.job-row{min-height:66px;padding:5px 18px;border-bottom:1px solid var(--border-color);font-size:13px}.job-row:last-child{border-bottom:0}.job-row:hover{background:color-mix(in srgb,var(--primary) 4%,var(--bg-card))}.job-title{display:flex;min-width:0;align-items:center;overflow:hidden;color:var(--text-primary);text-overflow:ellipsis;white-space:nowrap}.tree-line{width:20px;height:1px;flex:0 0 20px;margin-right:6px;background:var(--border-color)}.deadline{width:fit-content;border-radius:6px;padding:4px 7px;color:var(--text-secondary);background:var(--bg-page);font-size:12px}.deadline.empty{color:var(--text-tertiary)}.stage-select{width:96px}.result-cell{display:grid;min-width:0;gap:3px}.result-select{width:128px}.result-select.result-teal :deep(.el-select__wrapper){background:color-mix(in srgb,var(--teal) 10%,var(--bg-card));box-shadow:0 0 0 1px color-mix(in srgb,var(--teal) 35%,var(--border-color)) inset}.result-select.result-success :deep(.el-select__wrapper){background:color-mix(in srgb,var(--success) 10%,var(--bg-card));box-shadow:0 0 0 1px color-mix(in srgb,var(--success) 35%,var(--border-color)) inset}.result-select.result-danger :deep(.el-select__wrapper){background:color-mix(in srgb,var(--danger) 10%,var(--bg-card));box-shadow:0 0 0 1px color-mix(in srgb,var(--danger) 35%,var(--border-color)) inset}.result-select.result-info :deep(.el-select__wrapper){background:var(--bg-page)}.result-reason{overflow:hidden;color:var(--danger);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.row-actions{display:flex;justify-content:flex-end;gap:8px}.row-actions .el-button+.el-button{margin-left:0}.table-footer{display:flex;align-items:center;justify-content:space-between;color:var(--text-secondary);font-size:13px}.pagination-controls{display:flex;align-items:center;gap:12px}.pagination-controls .el-select{width:112px}.empty-state{min-height:360px}
 @media(max-width:1380px){.filters{grid-template-columns:minmax(220px,1.5fr) repeat(4,minmax(105px,.7fr)) auto}.company-row,.job-row,.table-head{padding-right:12px;padding-left:12px}.stage-count,.limit-summary{padding:5px 7px}}
 @container(max-width:1250px){.jobs-page :deep(.page-header){flex-wrap:wrap}.header-actions{width:100%;justify-content:flex-end}.filters{grid-template-columns:minmax(180px,1.4fr) repeat(2,minmax(120px,1fr))}.job-grid{grid-template-columns:minmax(180px,1.35fr) minmax(105px,.8fr) 72px 92px 68px 78px 100px 92px;column-gap:5px}.company-logo{width:42px;height:42px;flex-basis:42px}.company-info{gap:9px}.company-name-line{gap:6px}.company-region{display:none}.stage-summary{gap:4px}.stage-count,.limit-summary{padding:4px 6px;font-size:11px}.company-actions .el-button:first-child{padding:8px}.job-row{font-size:12px}.row-actions{gap:4px}.row-actions .el-button{padding:8px}}
 </style>

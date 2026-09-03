@@ -44,22 +44,26 @@ export async function importExcel():Promise<ImportReport|null>{
       const deliveryText=text(row,'是否已经投递简历','是否投递')
       const resultText=text(row,'投递结果','结果')
       const result=(resultByLabel[resultText]??(resultText in applicationResultLabels?resultText:'PENDING')) as ApplicationResult
+      const resultReason=text(row,'未通过原因','投递结果原因')
       let stage=(stageByLabel[stageText]??(stageText in applicationStageLabels?stageText:deliveryText==='已投递'?'APPLIED':'TO_APPLY')) as ApplicationStage
       if(result==='OFFER')stage='OFFER'
       else if(result==='UNSUITABLE')stage='UNSUITABLE'
-      else if(result==='FAILED')stage='REJECTED'
+      else if(['FAILED','JOB_CANCELLED','COMPANY_TERMINATED'].includes(result))stage='REJECTED'
       else if(result==='WITHDRAWN')stage='WITHDRAWN'
       const applicationDate=text(row,'投递日期','企业投递日期')
-      if(stage!=='TO_APPLY'||applicationDate||result!=='PENDING'){await execute('UPDATE applications SET stage=?,application_date=?,result=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?',[stage,applicationDate||null,result,jobId]);report.applicationsUpdated++}
+      if(stage!=='TO_APPLY'||applicationDate||result!=='PENDING'){await execute('UPDATE applications SET stage=?,application_date=?,result=?,result_reason=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?',[stage,applicationDate||null,result,result==='FAILED'?resultReason||null:null,jobId]);report.applicationsUpdated++}
     }catch(error){report.skipped++;report.errors.push(`第 ${rowNumber} 行：${error instanceof Error?error.message:'导入失败'}`)}
   }
   return report
 }
 
 export async function exportExcel(){
-  const jobs=await select<Record<string,unknown>>(`SELECT c.company_name AS 企业名称,c.company_type AS 企业性质,c.headquarters AS 总部所在地,j.job_name AS 岗位名称,j.location AS 工作地点,j.recruitment_batch AS 招聘批次,j.salary_text AS 薪资,j.education AS 学历要求,j.major_requirement AS 专业要求,j.job_requirement AS 岗位要求,j.recruitment_count AS 招聘人数,j.publish_date AS 发布日期,j.deadline AS 截止日期,j.job_url AS 招聘链接,COALESCE(a.stage,'TO_APPLY') AS 投递阶段,a.application_date AS 投递日期,a.result AS 投递结果,j.notes AS 备注 FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id ORDER BY c.company_name,j.job_name`)
+  const jobs=await select<Record<string,unknown>>(`SELECT c.company_name AS 企业名称,c.company_type AS 企业性质,c.headquarters AS 总部所在地,j.job_name AS 岗位名称,j.location AS 工作地点,j.recruitment_batch AS 招聘批次,j.salary_text AS 薪资,j.education AS 学历要求,j.major_requirement AS 专业要求,j.job_requirement AS 岗位要求,j.recruitment_count AS 招聘人数,j.publish_date AS 发布日期,j.deadline AS 截止日期,j.job_url AS 招聘链接,COALESCE(a.stage,'TO_APPLY') AS 投递阶段,a.application_date AS 投递日期,COALESCE(a.result,'PENDING') AS 投递结果,a.result_reason AS 未通过原因,j.notes AS 备注 FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id ORDER BY c.company_name,j.job_name`)
   const companies=await select<Record<string,unknown>>(`SELECT company_name AS 企业名称,company_type AS 企业性质,headquarters AS 总部所在地,official_website AS 官方网站,recruitment_website AS 招聘网站,recruitment_batch AS 招聘批次,description AS 企业简介,notes AS 备注 FROM companies ORDER BY company_name`)
-  jobs.forEach(row=>{row['投递阶段']=applicationStageLabels[(row['投递阶段']??'TO_APPLY') as ApplicationStage]})
+  jobs.forEach(row=>{
+    row['投递阶段']=applicationStageLabels[(row['投递阶段']??'TO_APPLY') as ApplicationStage]
+    row['投递结果']=applicationResultLabels[(row['投递结果']??'PENDING') as ApplicationResult]
+  })
   const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,XLSX.utils.json_to_sheet(jobs),'岗位与投递');XLSX.utils.book_append_sheet(workbook,XLSX.utils.json_to_sheet(companies),'企业')
   const now=new Date(),stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`
   const destination=await save({defaultPath:`求职投递数据_${stamp}.xlsx`,filters:[{name:'Excel 工作簿',extensions:['xlsx']}]})

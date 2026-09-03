@@ -12,12 +12,12 @@ const visible = ref(false)
 const saving = ref(false)
 const jobs = ref<{ id: number; label: string }[]>([])
 const formRef = ref<FormInstance>()
-const form = reactive<ApplicationInput>({ jobId: 0, stage: 'TO_APPLY', applicationDate: '', result: 'PENDING', notes: '' })
+const form = reactive<ApplicationInput>({ jobId: 0, stage: 'TO_APPLY', applicationDate: '', result: 'PENDING', resultReason: '', notes: '' })
 const rules: FormRules = { jobId: [{ required: true, message: '请选择岗位', trigger: 'change' }], stage: [{ required: true, message: '请选择阶段', trigger: 'change' }] }
 const resultOptions = Object.entries(applicationResultLabels).map(([value, label]) => ({ value: value as ApplicationResult, label }))
 
 async function open(record?: Application, jobId?: number, stage?: ApplicationStage) {
-  Object.assign(form, { jobId: jobId ?? record?.jobId ?? 0, stage: stage ?? record?.stage ?? 'TO_APPLY', applicationDate: record?.applicationDate ?? '', result: record?.result ?? 'PENDING', notes: record?.notes ?? '' })
+  Object.assign(form, { jobId: jobId ?? record?.jobId ?? 0, stage: stage ?? record?.stage ?? 'TO_APPLY', applicationDate: record?.applicationDate ?? '', result: record?.result ?? 'PENDING', resultReason: record?.resultReason ?? '', notes: record?.notes ?? '' })
   visible.value = true
   try { jobs.value = await listJobOptions() } catch { jobs.value = [] }
   nextTick(() => formRef.value?.clearValidate())
@@ -41,6 +41,7 @@ defineExpose({ open })
         <el-form-item label="当前阶段" prop="stage"><el-select v-model="form.stage"><el-option v-for="item in applicationStageOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="投递日期"><el-date-picker v-model="form.applicationDate" type="date" value-format="YYYY-MM-DD" /></el-form-item>
         <el-form-item label="结果"><el-select v-model="form.result"><el-option v-for="item in resultOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        <el-form-item v-if="form.result==='FAILED'" label="未通过原因"><el-input v-model="form.resultReason" maxlength="200" /></el-form-item>
       </div>
       <el-form-item label="备注"><el-input v-model="form.notes" type="textarea" :rows="3" maxlength="500" show-word-limit /></el-form-item>
     </el-form>

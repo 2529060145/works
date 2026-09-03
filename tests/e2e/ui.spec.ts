@@ -104,6 +104,8 @@ test('job library exposes grouped management controls', async ({ page }) => {
   await expect(page.getByText('全部地区', { exact: true })).toBeVisible()
   await expect(page.getByText('全部性质', { exact: true })).toBeVisible()
   await expect(page.getByText('全部批次', { exact: true })).toBeVisible()
+  await expect(page.getByText('投递结果', { exact: true })).toBeVisible()
+  await expect(page.getByText('投递资格', { exact: true })).toHaveCount(0)
   const moreFilters = page.getByRole('button', { name: '更多筛选' })
   await moreFilters.click()
   await expect(page.getByText('排序方式')).toBeVisible()

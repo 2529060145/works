@@ -9,7 +9,8 @@ const jobColumns = `j.id, j.company_id AS "companyId", c.company_name AS "compan
   j.education, j.major_requirement AS "majorRequirement", j.job_requirement AS "jobRequirement",
   j.recruitment_count AS "recruitmentCount", j.publish_date AS "publishDate", j.deadline,
   j.job_url AS "jobUrl", j.notes, j.created_at AS "createdAt", j.updated_at AS "updatedAt",
-  COALESCE(a.stage, 'TO_APPLY') AS stage, a.application_date AS "applicationDate"`
+  COALESCE(a.stage, 'TO_APPLY') AS stage, a.application_date AS "applicationDate",
+  COALESCE(a.result, 'PENDING') AS result, a.result_reason AS "resultReason"`
 
 export interface JobQuery {
   keyword?: string
