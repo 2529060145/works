@@ -2,6 +2,7 @@ import type { ApplicationStage } from '../types/application'
 import type { Job } from '../types/job'
 import type { ScheduleItem } from './reminderService'
 import { select } from './databaseService'
+import { decorateJobEligibility, getEffectivePendingCount } from './applicationEligibilityService'
 
 export interface DashboardData {
   totalJobs: number
@@ -17,11 +18,17 @@ export async function getDashboardData(): Promise<DashboardData> {
   const stageRows = await select<{ stage: ApplicationStage; value: number }>(`SELECT COALESCE(a.stage,'TO_APPLY') AS stage, COUNT(*) AS value FROM jobs j LEFT JOIN applications a ON a.job_id=j.id GROUP BY COALESCE(a.stage,'TO_APPLY')`)
   const stages = { TO_APPLY:0, APPLIED:0, WRITTEN_TEST:0, INTERVIEW:0, OFFER:0, REJECTED:0, WITHDRAWN:0, UNSUITABLE:0 } satisfies Record<ApplicationStage, number>
   stageRows.forEach(item => { stages[item.stage] = Number(item.value) })
+  stages.TO_APPLY = await getEffectivePendingCount()
   const baseColumns = `j.id, j.company_id AS "companyId", c.company_name AS "companyName", j.job_name AS "jobName", j.location,
     j.recruitment_batch AS "recruitmentBatch", j.salary_text AS "salaryText", j.deadline, j.job_url AS "jobUrl",
-    j.created_at AS "createdAt", j.updated_at AS "updatedAt", COALESCE(a.stage,'TO_APPLY') AS stage`
-  const recentJobs = await select<Job>(`SELECT ${baseColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id ORDER BY j.created_at DESC LIMIT 5`)
-  const deadlineJobs = await select<Job>(`SELECT ${baseColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE date(j.deadline) BETWEEN date('now','localtime') AND date('now','localtime','+7 day') ORDER BY date(j.deadline) LIMIT 5`)
+    j.created_at AS "createdAt", j.updated_at AS "updatedAt", COALESCE(a.stage,'TO_APPLY') AS stage,
+    a.application_date AS "applicationDate", COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType",
+    c.max_applications AS "maxApplications",
+    (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
+      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"`
+  const recentJobs = (await select<Job>(`SELECT ${baseColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id ORDER BY j.created_at DESC LIMIT 5`)).map(decorateJobEligibility)
+  const deadlineJobs = (await select<Job>(`SELECT ${baseColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE date(j.deadline) BETWEEN date('now','localtime') AND date('now','localtime','+7 day') ORDER BY date(j.deadline) LIMIT 20`))
+    .map(decorateJobEligibility).sort((left,right)=>Number(left.applicationBlocked)-Number(right.applicationBlocked)||String(left.deadline).localeCompare(String(right.deadline))).slice(0,5)
   const upcoming = await select<ScheduleItem>(`SELECT * FROM (
     SELECT 'written-'||w.id AS id,j.id AS "jobId",c.company_name AS "companyName",j.job_name AS "jobName",'WRITTEN_TEST' AS "eventType",'笔试' AS "eventLabel",w.scheduled_at AS "scheduledAt",w.location FROM written_tests w JOIN jobs j ON j.id=w.job_id JOIN companies c ON c.id=j.company_id WHERE w.status='WAITING'
     UNION ALL SELECT 'interview-'||i.id,j.id,c.company_name,j.job_name,'INTERVIEW','面试',i.scheduled_at,i.location FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id WHERE i.status='WAITING'

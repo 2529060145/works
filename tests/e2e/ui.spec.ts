@@ -41,10 +41,23 @@ test('company dialog opens and validates required fields and URLs', async ({ pag
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: '保存' }).click()
   await expect(page.getByText('请输入企业名称')).toBeVisible()
+  await expect(page.getByText('岗位投递限制')).toBeVisible()
+  await expect(page.getByText('未知', { exact: true })).toBeVisible()
+  await expect(page.getByText('不限制', { exact: true })).toBeVisible()
+  await expect(page.getByText('最多投递', { exact: true })).toBeVisible()
   await page.getByLabel('企业名称').fill('测试企业')
   await page.getByLabel('官方网站').fill('invalid-url')
   await page.getByLabel('官方网站').press('Tab')
   await expect(page.getByText('网址必须以 http:// 或 https:// 开头')).toBeVisible()
+})
+
+test('progress board is view-only and exposes all filters', async ({ page }) => {
+  await page.goto('/progress')
+  await expect(page.getByPlaceholder('搜索企业或岗位')).toBeVisible()
+  await expect(page.getByText('全部地区', { exact: true })).toBeVisible()
+  await expect(page.getByText('全部批次', { exact: true })).toBeVisible()
+  await expect(page.getByText('全部阶段', { exact: true })).toBeVisible()
+  await expect(page.locator('.job-card .el-select')).toHaveCount(0)
 })
 
 test('core add dialogs expose complete forms', async ({ page }) => {

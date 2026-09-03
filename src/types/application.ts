@@ -15,6 +15,8 @@ export interface Application {
   jobId: number
   companyName: string
   jobName: string
+  location?: string
+  recruitmentBatch?: string
   stage: ApplicationStage
   applicationDate?: string
   result: ApplicationResult

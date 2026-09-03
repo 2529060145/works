@@ -73,3 +73,7 @@
   min-height: 0;
   overflow-y: auto;
 }
+
+.multiline-message-box .el-message-box__message {
+  white-space: pre-line;
+}

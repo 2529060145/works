@@ -25,10 +25,17 @@ export const applicationStageOptions = Object.entries(applicationStageLabels).ma
   label,
 }))
 
-export function stageTone(stage?: ApplicationStage): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
+export const applicationStageColors: Record<ApplicationStage, string> = {
+  TO_APPLY: '#4F6FEA', APPLIED: '#43BFAE', WRITTEN_TEST: '#8B7CF6', INTERVIEW: '#F5B84B',
+  OFFER: '#36B77A', REJECTED: '#F26B67', WITHDRAWN: '#8796B5', UNSUITABLE: '#8796B5',
+}
+
+export function stageTone(stage?: ApplicationStage): 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'teal' {
   if (stage === 'OFFER') return 'success'
   if (stage === 'REJECTED' || stage === 'UNSUITABLE' || stage === 'WITHDRAWN') return 'danger'
-  if (stage === 'TO_APPLY') return 'warning'
-  if (stage === 'WRITTEN_TEST' || stage === 'INTERVIEW') return 'primary'
+  if (stage === 'TO_APPLY') return 'primary'
+  if (stage === 'APPLIED') return 'teal'
+  if (stage === 'WRITTEN_TEST') return 'purple'
+  if (stage === 'INTERVIEW') return 'warning'
   return 'info'
 }

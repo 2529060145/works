@@ -6,12 +6,13 @@ import { useRouter } from 'vue-router'
 import AppCard from '../../components/common/AppCard.vue'
 import PageHeader from '../../components/common/PageHeader.vue'
 import EmptyState from '../../components/common/EmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 import CompanyDialog from '../../dialogs/CompanyDialog.vue'
 import type { Company } from '../../types/company'
 import { deleteCompany, listCompanies } from '../../services/companyService'
 import { isTauriRuntime } from '../../services/databaseService'
 
-type CompanyRow = Company & { jobCount: number }
+type CompanyRow = Company & { jobCount: number; appliedCount: number }
 const router = useRouter()
 const rows = ref<CompanyRow[]>([])
 const keyword = ref('')
@@ -31,6 +32,13 @@ async function remove(row: CompanyRow) {
   await deleteCompany(row.id)
   ElMessage.success('企业已删除')
   await load()
+}
+
+function limitText(row: CompanyRow) {
+  if (row.applicationLimitType === 'UNKNOWN') return '限制未知'
+  if (row.applicationLimitType === 'UNLIMITED') return '不限制'
+  const remaining = Math.max(0, (row.maxApplications ?? 1) - Number(row.appliedCount ?? 0))
+  return remaining ? `最多 ${row.maxApplications} 个 · 剩余 ${remaining}` : `最多 ${row.maxApplications} 个 · 已达上限`
 }
 
 onMounted(load)
@@ -54,6 +62,8 @@ onMounted(load)
         <el-table-column prop="headquarters" label="总部" width="120" />
         <el-table-column prop="recruitmentBatch" label="招聘批次" min-width="150" />
         <el-table-column prop="jobCount" label="岗位数" width="90" align="center" />
+        <el-table-column label="投递限制" min-width="190"><template #default="scope"><StatusTag :type="scope.row.applicationLimitType==='LIMITED' && scope.row.appliedCount>=scope.row.maxApplications?'danger':scope.row.applicationLimitType==='LIMITED'?'success':'info'">{{ limitText(scope.row) }}</StatusTag></template></el-table-column>
+        <el-table-column label="已投" width="80" align="center"><template #default="scope">{{ scope.row.appliedCount || 0 }}</template></el-table-column>
         <el-table-column label="操作" width="168" fixed="right">
           <template #default="scope">
             <el-button :icon="View" link type="primary" title="查看详情" @click="router.push(`/companies/${scope.row.id}`)" />

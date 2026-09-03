@@ -11,8 +11,8 @@ import AppCard from '../../components/common/AppCard.vue'
 import StatCard from '../../components/dashboard/StatCard.vue'
 import CompanyDialog from '../../dialogs/CompanyDialog.vue'
 import JobDialog from '../../dialogs/JobDialog.vue'
-import ApplicationDialog from '../../dialogs/ApplicationDialog.vue'
-import { applicationStageLabels } from '../../constants/status'
+import StatusTag from '../../components/common/StatusTag.vue'
+import { applicationStageColors, applicationStageLabels } from '../../constants/status'
 import { getDashboardData, type DashboardData } from '../../services/statisticsService'
 import { isTauriRuntime } from '../../services/databaseService'
 
@@ -27,16 +27,16 @@ const todayText = computed(() => {
 
 use([BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
 
-const router=useRouter(),loading=ref(false),companyDialog=ref<InstanceType<typeof CompanyDialog>>(),jobDialog=ref<InstanceType<typeof JobDialog>>(),applicationDialog=ref<InstanceType<typeof ApplicationDialog>>()
+const router=useRouter(),loading=ref(false),companyDialog=ref<InstanceType<typeof CompanyDialog>>(),jobDialog=ref<InstanceType<typeof JobDialog>>()
 const progressChart=ref<HTMLElement>(),locationChart=ref<HTMLElement>(),companyChart=ref<HTMLElement>()
 const data=ref<DashboardData>({totalJobs:0,stages:{TO_APPLY:0,APPLIED:0,WRITTEN_TEST:0,INTERVIEW:0,OFFER:0,REJECTED:0,WITHDRAWN:0,UNSUITABLE:0},recentJobs:[],deadlineJobs:[],upcoming:[],locations:[],companyTypes:[]})
 let chartInstances:ECharts[]=[]
 const stats=computed(()=>[
   { title:'岗位总数',value:data.value.totalJobs,description:'全部岗位',tone:'primary' as const,icon:Briefcase },
-  { title:'待投递',value:data.value.stages.TO_APPLY,description:'准备中的机会',tone:'warning' as const,icon:Promotion },
-  { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'info' as const,icon:CircleCheck },
+  { title:'待投递',value:data.value.stages.TO_APPLY,description:'仍具备投递资格',tone:'primary' as const,icon:Promotion },
+  { title:'已投递',value:data.value.stages.APPLIED,description:'等待反馈',tone:'teal' as const,icon:CircleCheck },
   { title:'笔试',value:data.value.stages.WRITTEN_TEST,description:'进入笔试流程',tone:'purple' as const,icon:Document },
-  { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'primary' as const,icon:User },
+  { title:'面试',value:data.value.stages.INTERVIEW,description:'进入面试流程',tone:'warning' as const,icon:User },
   { title:'Offer',value:data.value.stages.OFFER,description:'已收获结果',tone:'success' as const,icon:Medal },
   { title:'淘汰',value:data.value.stages.REJECTED,description:'流程已结束',tone:'danger' as const,icon:CircleClose },
 ])
@@ -44,7 +44,7 @@ const stats=computed(()=>[
 function renderCharts(){chartInstances.forEach(i=>i.dispose());chartInstances=[];if(!progressChart.value||!locationChart.value||!companyChart.value)return
   const base={animationDuration:350,textStyle:{fontFamily:'Microsoft YaHei'}}
   const progress=init(progressChart.value),location=init(locationChart.value),company=init(companyChart.value);chartInstances=[progress,location,company]
-  progress.setOption({...base,tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['48%','72%'],center:['50%','43%'],label:{show:false},data:Object.entries(data.value.stages).filter(([,value])=>value>0).map(([name,value])=>({name:applicationStageLabels[name as keyof typeof applicationStageLabels],value}))}]})
+  progress.setOption({...base,color:Object.values(applicationStageColors),tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['48%','72%'],center:['50%','43%'],label:{show:false},data:Object.entries(data.value.stages).filter(([,value])=>value>0).map(([name,value])=>({name:applicationStageLabels[name as keyof typeof applicationStageLabels],value,itemStyle:{color:applicationStageColors[name as keyof typeof applicationStageColors]}}))}]})
   location.setOption({...base,tooltip:{trigger:'axis'},grid:{left:20,right:18,top:10,bottom:20,containLabel:true},xAxis:{type:'value',minInterval:1,splitLine:{lineStyle:{color:'#eef1f6'}}},yAxis:{type:'category',data:data.value.locations.map(i=>i.name).reverse(),axisTick:{show:false}},series:[{type:'bar',data:data.value.locations.map(i=>i.value).reverse(),barWidth:14,itemStyle:{color:'#4f6ef7',borderRadius:[0,4,4,0]}}]})
   company.setOption({...base,tooltip:{trigger:'item'},legend:{bottom:0},series:[{type:'pie',radius:['45%','70%'],center:['50%','43%'],label:{show:false},data:data.value.companyTypes}]})
 }
@@ -100,7 +100,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
           </div>
           <el-button link type="primary" @click="router.push('/jobs')">查看更多</el-button>
         </div>
-        <button v-for="item in data.recentJobs" :key="item.id" class="data-row" type="button" @click="router.push(`/jobs/${item.id}`)"><span><strong>{{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><small>{{ item.location||'未填写地点' }}</small></button><div v-if="!data.recentJobs.length" class="table-empty">暂无岗位</div>
+        <button v-for="item in data.recentJobs" :key="item.id" class="data-row" type="button" @click="router.push(`/jobs/${item.id}`)"><span><strong>{{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><StatusTag v-if="item.applicationBlocked" type="danger">已达企业上限</StatusTag><small v-else>{{ item.location||'未填写地点' }}</small></button><div v-if="!data.recentJobs.length" class="table-empty">暂无岗位</div>
       </AppCard>
       <AppCard class="panel">
         <div class="panel-head">
@@ -110,7 +110,7 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
           </div>
           <span class="count-pill">{{ data.deadlineJobs.length }}</span>
         </div>
-        <button v-for="item in data.deadlineJobs" :key="item.id" class="data-row" type="button" @click="router.push(`/jobs/${item.id}`)"><span><strong>{{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><small class="deadline">{{ item.deadline }}</small></button><div v-if="!data.deadlineJobs.length" class="table-empty warning">暂无截止提醒</div>
+        <button v-for="item in data.deadlineJobs" :key="item.id" class="data-row" :class="{muted:item.applicationBlocked}" type="button" @click="router.push(`/jobs/${item.id}`)"><span><strong>{{ item.jobName }}</strong><small>{{ item.companyName }}</small></span><span class="deadline-cell"><StatusTag v-if="item.applicationBlocked" type="info">已达上限</StatusTag><small class="deadline">{{ item.deadline }}</small></span></button><div v-if="!data.deadlineJobs.length" class="table-empty warning">暂无截止提醒</div>
       </AppCard>
       <AppCard class="panel">
         <div class="panel-head">
@@ -178,12 +178,12 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
         <div class="quick-actions">
           <button type="button" @click="companyDialog?.open()">新增企业</button>
           <button type="button" @click="jobDialog?.open()">新增岗位</button>
-          <button type="button" @click="applicationDialog?.open()">记录投递</button>
+          <button type="button" @click="router.push('/jobs')">更新投递状态</button>
           <button type="button" @click="router.push('/schedule')">日程安排</button>
         </div>
       </AppCard>
     </div>
-    <CompanyDialog ref="companyDialog" @saved="load"/><JobDialog ref="jobDialog" @saved="load"/><ApplicationDialog ref="applicationDialog" @saved="load"/>
+    <CompanyDialog ref="companyDialog" @saved="load"/><JobDialog ref="jobDialog" @saved="load"/>
   </div>
 </template>
 
@@ -417,6 +417,8 @@ onBeforeUnmount(()=>{window.removeEventListener('resize',resizeCharts);chartInst
   small { color: var(--text-secondary); }
   .deadline { color: var(--warning); }
 }
+
+.data-row.muted{opacity:.68}.deadline-cell{display:flex!important;align-items:center;justify-content:flex-end;gap:7px}.deadline-cell small{overflow:visible}
 
 .chart-host {
   width: 100%;

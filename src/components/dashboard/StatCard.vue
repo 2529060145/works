@@ -4,7 +4,7 @@ defineProps<{
   title: string
   value: number | string
   description: string
-  tone?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple'
+  tone?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'teal'
   icon: Component
 }>()
 </script>
@@ -95,5 +95,9 @@ small {
 
 .purple {
   color: var(--purple);
+}
+
+.teal {
+  color: var(--teal);
 }
 </style>

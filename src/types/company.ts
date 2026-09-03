@@ -1,3 +1,5 @@
+export type ApplicationLimitType = 'UNKNOWN' | 'UNLIMITED' | 'LIMITED'
+
 export interface Company {
   id: number
   companyName: string
@@ -8,8 +10,12 @@ export interface Company {
   headquarters?: string
   description?: string
   notes?: string
+  applicationLimitType: ApplicationLimitType
+  maxApplications?: number
   createdAt: string
   updatedAt: string
 }
 
-export type CompanyInput = Omit<Company, 'id' | 'createdAt' | 'updatedAt'>
+export type CompanyInput = Omit<Company, 'id' | 'createdAt' | 'updatedAt' | 'applicationLimitType'> & {
+  applicationLimitType?: ApplicationLimitType
+}

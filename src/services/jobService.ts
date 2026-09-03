@@ -1,6 +1,7 @@
 import type { ApplicationStage } from '../types/application'
 import type { Job, JobInput } from '../types/job'
 import { execute, getDatabase, select } from './databaseService'
+import { decorateJobEligibility } from './applicationEligibilityService'
 
 const jobColumns = `j.id, j.company_id AS "companyId", c.company_name AS "companyName", j.job_name AS "jobName",
   j.location, j.recruitment_batch AS "recruitmentBatch", j.salary_text AS "salaryText",
@@ -56,8 +57,13 @@ export async function listJobs(query: JobQuery = {}) {
   const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20))
   const where = clauses.join(' AND ')
   const countRows = await select<{ count: number }>(`SELECT COUNT(*) AS count FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE ${where}`, values)
-  const items = await select<Job>(`SELECT ${jobColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize])
-  return { items, total: Number(countRows[0]?.count ?? 0) }
+  const items = await select<Job>(`SELECT ${jobColumns}, COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType",
+    c.max_applications AS "maxApplications",
+    (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
+      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
+    FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id
+    WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`, [...values, pageSize, (page - 1) * pageSize])
+  return { items: items.map(decorateJobEligibility), total: Number(countRows[0]?.count ?? 0) }
 }
 
 export async function listJobLibrary(query: Omit<JobQuery, 'page' | 'pageSize'> = {}) {
@@ -87,9 +93,14 @@ export async function listJobLibrary(query: Omit<JobQuery, 'page' | 'pageSize'> 
   }
   const order = query.sort === 'deadline' ? 'c.company_name ASC, j.deadline IS NULL, j.deadline ASC'
     : query.sort === 'updated' ? 'c.updated_at DESC, j.updated_at DESC' : 'c.company_name ASC, j.job_name ASC'
-  return select<Job>(`SELECT ${jobColumns}, c.company_type AS "companyType", c.headquarters
+  const jobs = await select<Job>(`SELECT ${jobColumns}, c.company_type AS "companyType", c.headquarters,
+    COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType", c.max_applications AS "maxApplications",
+    (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
+      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
     FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id
     WHERE ${clauses.join(' AND ')} ORDER BY ${order}`, values)
+  const decorated = jobs.map(decorateJobEligibility)
+  return query.stage === 'TO_APPLY' ? decorated.filter(job => !job.applicationBlocked) : decorated
 }
 
 export async function listJobLibraryOptions() {
@@ -106,8 +117,12 @@ export async function listJobLibraryOptions() {
 }
 
 export async function getJob(id: number) {
-  const rows = await select<Job>(`SELECT ${jobColumns} FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE j.id=?`, [id])
-  return rows[0] ?? null
+  const rows = await select<Job>(`SELECT ${jobColumns}, COALESCE(c.application_limit_type,'UNKNOWN') AS "applicationLimitType",
+    c.max_applications AS "maxApplications",
+    (SELECT COUNT(*) FROM jobs counted_job JOIN applications counted_application ON counted_application.job_id=counted_job.id
+      WHERE counted_job.company_id=c.id AND counted_application.application_date IS NOT NULL) AS "companyAppliedCount"
+    FROM jobs j JOIN companies c ON c.id=j.company_id LEFT JOIN applications a ON a.job_id=j.id WHERE j.id=?`, [id])
+  return rows[0] ? decorateJobEligibility(rows[0]) : null
 }
 
 export async function saveJob(input: JobInput, id?: number) {

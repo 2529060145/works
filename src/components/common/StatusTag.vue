@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  type?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'teal'
 }>()
 </script>
 
@@ -45,4 +45,7 @@ defineProps<{
   color: var(--info);
   background: rgba(59, 130, 246, 0.12);
 }
+
+.purple { color: var(--purple); background: color-mix(in srgb, var(--purple) 13%, transparent); }
+.teal { color: #238f82; background: color-mix(in srgb, var(--teal) 15%, transparent); }
 </style>

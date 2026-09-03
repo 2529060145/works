@@ -23,6 +23,11 @@ export interface Job {
   applicationDate?: string
   companyType?: string
   headquarters?: string
+  applicationLimitType?: import('./company').ApplicationLimitType
+  maxApplications?: number
+  companyAppliedCount?: number
+  remainingSlots?: number
+  applicationBlocked?: boolean
 }
 
-export type JobInput = Omit<Job, 'id' | 'companyName' | 'companyType' | 'headquarters' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate'>
+export type JobInput = Omit<Job, 'id' | 'companyName' | 'companyType' | 'headquarters' | 'applicationLimitType' | 'maxApplications' | 'companyAppliedCount' | 'remainingSlots' | 'applicationBlocked' | 'createdAt' | 'updatedAt' | 'stage' | 'applicationDate'>

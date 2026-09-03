@@ -35,6 +35,8 @@ const migrations = [
     recruitment_website TEXT,
     recruitment_batch TEXT,
     headquarters TEXT,
+    application_limit_type TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK(application_limit_type IN ('UNKNOWN','UNLIMITED','LIMITED')),
+    max_applications INTEGER CHECK(max_applications IS NULL OR max_applications >= 1),
     description TEXT,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -141,6 +143,14 @@ export async function initializeDatabase() {
   if (initialized || !isTauriRuntime()) return
   await database.execute('PRAGMA foreign_keys = ON')
   for (const statement of migrations) await database.execute(statement)
+  const companyColumns = await database.select<{ name: string }[]>('PRAGMA table_info(companies)')
+  const existingCompanyColumns = new Set(companyColumns.map(column => column.name))
+  if (!existingCompanyColumns.has('application_limit_type')) {
+    await database.execute("ALTER TABLE companies ADD COLUMN application_limit_type TEXT NOT NULL DEFAULT 'UNKNOWN'")
+  }
+  if (!existingCompanyColumns.has('max_applications')) {
+    await database.execute('ALTER TABLE companies ADD COLUMN max_applications INTEGER')
+  }
   await database.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)', [1])
   for (const [name, color] of [
     ['重点', '#ef5b5b'],
