@@ -54,10 +54,8 @@ export async function saveApplication(input: ApplicationInput) {
 
 export async function updateApplicationResult(jobId: number, result: ApplicationResult, resultReason?: string) {
   if (result === 'FAILED' && !resultReason?.trim()) throw new Error('请填写未通过原因')
-  const rows = await select<{ stage: ApplicationStage; applicationDate?: string }>(
-    'SELECT stage, application_date AS "applicationDate" FROM applications WHERE job_id=?', [jobId],
-  )
-  if (!rows[0]?.applicationDate) throw new Error('该岗位尚未投递，不能填写投递结果')
+  const rows = await select<{ stage: ApplicationStage }>('SELECT stage FROM applications WHERE job_id=?', [jobId])
+  if (!rows[0] || rows[0].stage === 'TO_APPLY') throw new Error('该岗位尚未投递，不能填写投递结果')
   let stage = rows[0].stage
   if (result === 'FAILED' || result === 'JOB_CANCELLED' || result === 'COMPANY_TERMINATED') stage = 'REJECTED'
   else if (result === 'WITHDRAWN') stage = 'WITHDRAWN'
@@ -69,8 +67,9 @@ export async function updateApplicationResult(jobId: number, result: Application
       EXISTS(SELECT 1 FROM written_tests WHERE job_id=?) AS "hasWrittenTest"`, [jobId, jobId])
     stage = progress[0]?.hasInterview ? 'INTERVIEW' : progress[0]?.hasWrittenTest ? 'WRITTEN_TEST' : 'APPLIED'
   }
-  await execute('UPDATE applications SET result=?, result_reason=?, stage=?, updated_at=CURRENT_TIMESTAMP WHERE job_id=?',
-    [result, result === 'FAILED' ? resultReason?.trim() : null, stage, jobId])
+  await execute(`UPDATE applications SET result=?, result_reason=?, stage=?,
+    application_date=COALESCE(application_date,date('now','localtime')), updated_at=CURRENT_TIMESTAMP WHERE job_id=?`,
+  [result, result === 'FAILED' ? resultReason?.trim() : null, stage, jobId])
 }
 
 export async function updateApplicationStage(jobId: number, stage: ApplicationStage) {
