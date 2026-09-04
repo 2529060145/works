@@ -320,6 +320,78 @@ test("profile forms use standardized selects and conditional fields", async ({
   expect(await drawer.locator(".el-select").count()).toBeGreaterThanOrEqual(9);
 });
 
+test("complete basic profile packs every visible row without layout holes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.addInitScript(() => {
+    const runtime = window as typeof window & {
+      __TAURI_INTERNALS__: {
+        invoke: (command: string, args: Record<string, any>) => Promise<any>;
+      };
+    };
+    runtime.__TAURI_INTERNALS__ = {
+      invoke: async (command, args) => {
+        const query = String(args?.query ?? "");
+        if (command === "database_execute")
+          return { rowsAffected: 1, lastInsertId: 1 };
+        if (command !== "database_select") return null;
+        if (query.includes("FROM profile_basic"))
+          return [
+            {
+              id: 1,
+              name: "乌中可",
+              english_name: "Wu Zhongke",
+              gender: "男",
+              birth_date: "2000-09-22",
+              ethnicity: "汉族",
+              political_status: "群众",
+              marital_status: "未婚",
+              health_status: "健康",
+              height: "185cm",
+              weight: "60kg",
+              current_residence: "山东省青岛市崂山区",
+              household_location: "山东省聊城市茌平区",
+              native_place: "山东省聊城市茌平区",
+              student_origin: "山东省聊城市茌平区",
+              household_type: "居民户",
+              mailing_address: "山东省青岛市崂山区青岛科技大学北苑",
+              phone: "17806245772",
+              email: "17806245772@163.com",
+              work_status: "未参加工作",
+              current_industry: "软件和信息技术服务业",
+              student_leader: "否",
+              specialties: "羽毛球、编程、技术学习",
+              overseas_work: "无",
+              disciplinary_record: "无",
+            },
+          ];
+        if (query.includes("PRAGMA table_info")) return [];
+        return [];
+      },
+    };
+  });
+  await page.goto("/profile/basic");
+  const grid = page.locator(".info-grid");
+  await expect(grid.getByText("乌中可", { exact: true })).toBeVisible();
+  const geometry = await grid.evaluate((element) => {
+    const gridRight = element.getBoundingClientRect().right;
+    const rows = new Map<number, number>();
+    for (const child of Array.from(element.children)) {
+      const box = child.getBoundingClientRect();
+      const top = Math.round(box.top);
+      rows.set(top, Math.max(rows.get(top) ?? 0, box.right));
+    }
+    return { gridRight, rowRights: Array.from(rows.values()) };
+  });
+  for (const right of geometry.rowRights)
+    expect(right).toBeGreaterThan(geometry.gridRight - 5);
+  await page.screenshot({
+    path: "test-artifacts/profile-packed-layout-v0.2.3.png",
+    fullPage: true,
+  });
+});
+
 test("date pickers are Chinese and education no longer exposes current status", async ({
   page,
 }) => {
@@ -416,10 +488,19 @@ test("proof material timestamps use local time and old DOC has an explicit fallb
   await expect(
     page.getByText("2026-09-04 11:26:17", { exact: true }).first(),
   ).toBeVisible();
+  const materialActions = page.locator(".material-actions");
+  await expect(materialActions).toBeVisible();
+  const actionRows = await materialActions
+    .locator("button")
+    .evaluateAll((buttons) =>
+      buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
+    );
+  expect(new Set(actionRows).size).toBe(1);
   await page.getByRole("button", { name: "预览", exact: true }).click();
   await expect(
     page.getByText("暂不支持旧版 DOC 客户端内预览", { exact: false }),
   ).toBeVisible();
+  await expect(page.locator(".preview-pane")).toHaveCSS("overflow-y", "auto");
 });
 
 test("proof materials expose quick type and category filters", async ({

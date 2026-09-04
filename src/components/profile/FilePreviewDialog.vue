@@ -333,7 +333,9 @@ defineExpose({ open });
 .preview-main {
   display: grid;
   min-width: 0;
+  min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
 }
 .pdf-toolbar {
   display: flex;
@@ -348,8 +350,11 @@ defineExpose({ open });
   margin-left: 0;
 }
 .preview-pane {
+  width: 100%;
+  height: 100%;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 24px;
   background: #eef0f4;
   text-align: center;
@@ -362,6 +367,9 @@ defineExpose({ open });
   box-shadow: 0 3px 16px rgba(30, 42, 70, 0.16);
 }
 .docx-preview {
+  display: block;
+  min-width: min-content;
+  min-height: 100%;
   text-align: left;
 }
 .preview-error {
@@ -396,8 +404,12 @@ defineExpose({ open });
 <style lang="scss">
 .file-preview-dialog .el-dialog__body {
   padding: 8px 18px 18px;
+  overflow: hidden;
 }
 .docx-preview .docx-wrapper {
+  display: block;
+  width: max-content;
+  min-width: 100%;
   padding: 20px;
   background: transparent;
 }

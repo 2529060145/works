@@ -266,7 +266,6 @@ const basicFields: ProfileField[] = [
     options: industries,
     allowCreate: true,
   },
-  { key: "specialties", label: "特长爱好", wide: true },
   {
     key: "student_leader",
     label: "是否学生干部",
@@ -274,6 +273,7 @@ const basicFields: ProfileField[] = [
     options: yesNo,
     defaultValue: "否",
   },
+  { key: "specialties", label: "特长爱好", wide: true },
   {
     key: "overseas_work",
     label: "海外工作经历",
@@ -1173,7 +1173,12 @@ onMounted(load);
           <template v-for="field in basicFields" :key="field.key"
             ><div
               v-if="fieldVisible(field, basic as any)"
-              :class="{ wide: field.wide }"
+              :class="{
+                wide: field.wide,
+                full:
+                  field.key === 'disciplinary_record' &&
+                  basic.work_status === '已参加工作',
+              }"
             >
               <dt>{{ field.label }}</dt>
               <dd>{{ displayValue(field, (basic as any)[field.key]) }}</dd>
@@ -1596,6 +1601,9 @@ onMounted(load);
 .info-grid .wide,
 .detail-grid .wide {
   grid-column: span 2;
+}
+.info-grid .full {
+  grid-column: 1 / -1;
 }
 .info-grid dt,
 .detail-grid dt {

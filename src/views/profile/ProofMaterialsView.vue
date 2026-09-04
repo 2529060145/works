@@ -312,25 +312,39 @@ onMounted(load);
           ><template #default="scope">{{
             formatLocalDateTime(scope.row.createdAt)
           }}</template></el-table-column
-        ><el-table-column label="操作" width="220" fixed="right"
+        ><el-table-column label="操作" width="226" fixed="right"
           ><template #default="scope"
-            ><el-button :icon="View" @click="previewDialog?.open(scope.row)"
-              >预览</el-button
-            ><el-button :icon="FolderOpened" @click="openFile(scope.row)"
-              >打开</el-button
-            ><el-dropdown trigger="click" @command="command($event, scope.row)"
-              ><el-button :icon="MoreFilled" title="更多" /><template #dropdown
-                ><el-dropdown-menu
-                  ><el-dropdown-item command="edit" :icon="Edit"
-                    >修改名称和分类</el-dropdown-item
-                  ><el-dropdown-item command="reveal" :icon="FolderOpened"
-                    >打开文件所在位置</el-dropdown-item
-                  ><el-dropdown-item command="delete" :icon="Delete" divided
-                    >删除</el-dropdown-item
-                  ></el-dropdown-menu
-                ></template
-              ></el-dropdown
-            ></template
+            ><div class="material-actions">
+              <el-button
+                :icon="View"
+                size="small"
+                @click="previewDialog?.open(scope.row)"
+                >预览</el-button
+              ><el-button
+                :icon="FolderOpened"
+                size="small"
+                @click="openFile(scope.row)"
+                >打开</el-button
+              ><el-dropdown
+                trigger="click"
+                @command="command($event, scope.row)"
+                ><el-button
+                  :icon="MoreFilled"
+                  size="small"
+                  title="更多"
+                /><template #dropdown
+                  ><el-dropdown-menu
+                    ><el-dropdown-item command="edit" :icon="Edit"
+                      >修改名称和分类</el-dropdown-item
+                    ><el-dropdown-item command="reveal" :icon="FolderOpened"
+                      >打开文件所在位置</el-dropdown-item
+                    ><el-dropdown-item command="delete" :icon="Delete" divided
+                      >删除</el-dropdown-item
+                    ></el-dropdown-menu
+                  ></template
+                ></el-dropdown
+              >
+            </div></template
           ></el-table-column
         ></el-table
       ><EmptyState
@@ -373,6 +387,21 @@ onMounted(load);
 .filters > .el-input {
   min-width: 280px;
   flex: 1 1 320px;
+}
+.material-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  white-space: nowrap;
+}
+.material-actions .el-button + .el-button {
+  margin-left: 0;
+}
+.material-actions .el-dropdown {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: 0;
 }
 </style>
 <style scoped lang="scss">

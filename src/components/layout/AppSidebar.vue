@@ -1,39 +1,49 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ArrowRight, Briefcase, Document, Expand, Fold, User } from '@element-plus/icons-vue'
-import { dataNavItems, primaryNavItems } from '../../constants/routes'
-import { useAppStore } from '../../stores/app'
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import {
+  ArrowDown,
+  ArrowRight,
+  Briefcase,
+  Document,
+  Expand,
+  Fold,
+  User,
+} from "@element-plus/icons-vue";
+import { dataNavItems, primaryNavItems } from "../../constants/routes";
+import { useAppStore } from "../../stores/app";
 
-const route = useRoute()
-const router = useRouter()
-const appStore = useAppStore()
-const profileExpanded = ref(route.path.startsWith('/profile'))
+const route = useRoute();
+const router = useRouter();
+const appStore = useAppStore();
+const profileExpanded = ref(route.path.startsWith("/profile"));
 
 const activePath = computed(() => {
-  if (route.path.startsWith('/jobs')) return '/jobs'
-  if (route.path.startsWith('/companies')) return '/companies'
-  if (route.path.startsWith('/data/import')) return '/data/import'
-  if (route.path.startsWith('/data/export')) return '/data/export'
-  if (route.path.startsWith('/data/backup')) return '/data/backup'
-  return route.path
-})
+  if (route.path.startsWith("/jobs")) return "/jobs";
+  if (route.path.startsWith("/companies")) return "/companies";
+  if (route.path.startsWith("/data/import")) return "/data/import";
+  if (route.path.startsWith("/data/export")) return "/data/export";
+  if (route.path.startsWith("/data/backup")) return "/data/backup";
+  return route.path;
+});
 
-watch(() => route.path, (path) => {
-  if (path.startsWith('/profile')) profileExpanded.value = true
-})
+watch(
+  () => route.path,
+  (path) => {
+    if (path.startsWith("/profile")) profileExpanded.value = true;
+  },
+);
 
 function navigate(path: string) {
-  router.push(path)
+  router.push(path);
 }
-
 
 function toggleProfile() {
   if (appStore.sidebarCollapsed) {
-    router.push('/profile/basic')
-    return
+    router.push("/profile/basic");
+    return;
   }
-  profileExpanded.value = !profileExpanded.value
+  profileExpanded.value = !profileExpanded.value;
 }
 </script>
 
@@ -64,7 +74,6 @@ function toggleProfile() {
         </button>
       </nav>
 
-
       <nav class="nav-group profile-nav">
         <button
           class="nav-item profile-parent"
@@ -78,7 +87,10 @@ function toggleProfile() {
             <component :is="profileExpanded ? ArrowDown : ArrowRight" />
           </el-icon>
         </button>
-        <div v-if="profileExpanded && !appStore.sidebarCollapsed" class="profile-children">
+        <div
+          v-if="profileExpanded && !appStore.sidebarCollapsed"
+          class="profile-children"
+        >
           <button
             class="profile-child"
             :class="{ active: activePath === '/profile/basic' }"
@@ -118,10 +130,16 @@ function toggleProfile() {
     </el-scrollbar>
 
     <div class="sidebar-footer">
-      <button class="collapse-btn" type="button" @click="appStore.toggleSidebar()">
-        <el-icon><component :is="appStore.sidebarCollapsed ? Expand : Fold" /></el-icon>
+      <button
+        class="collapse-btn"
+        type="button"
+        @click="appStore.toggleSidebar()"
+      >
+        <el-icon
+          ><component :is="appStore.sidebarCollapsed ? Expand : Fold"
+        /></el-icon>
       </button>
-      <span v-if="!appStore.sidebarCollapsed">v0.2.2</span>
+      <span v-if="!appStore.sidebarCollapsed">v0.2.3</span>
     </div>
   </aside>
 </template>
@@ -241,7 +259,9 @@ function toggleProfile() {
     color: var(--primary);
     background: var(--primary-tint);
 
-    .el-icon { color: var(--primary); }
+    .el-icon {
+      color: var(--primary);
+    }
   }
 
   &.active {
@@ -249,7 +269,9 @@ function toggleProfile() {
     background: #eef2ff;
     font-weight: 600;
 
-    .el-icon { color: var(--primary); }
+    .el-icon {
+      color: var(--primary);
+    }
   }
 }
 
@@ -299,7 +321,9 @@ function toggleProfile() {
   font-size: 14px;
   text-align: left;
 
-  .el-icon { font-size: 16px; }
+  .el-icon {
+    font-size: 16px;
+  }
 
   &:hover,
   &.active {
@@ -307,7 +331,9 @@ function toggleProfile() {
     background: #f0edff;
   }
 
-  &.active { font-weight: 600; }
+  &.active {
+    font-weight: 600;
+  }
 }
 
 .sidebar-footer {
