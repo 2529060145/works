@@ -140,6 +140,25 @@ SELECT 'today-upcoming=' || SUM("eventType"='INTERVIEW') || ',' || SUM("eventTyp
   SELECT 'INTERVIEW' AS "eventType",i.scheduled_at AS "scheduledAt" FROM interviews i JOIN jobs j ON j.id=i.job_id JOIN companies c ON c.id=j.company_id WHERE c.company_name='today-schedule-company' AND i.status IN ('WAITING','SCHEDULED')
   UNION ALL SELECT 'WRITTEN_TEST',w.scheduled_at FROM written_tests w JOIN jobs j ON j.id=w.job_id JOIN companies c ON c.id=j.company_id WHERE c.company_name='today-schedule-company' AND w.status IN ('WAITING','SCHEDULED')
 ) WHERE date("scheduledAt") BETWEEN date('now','localtime') AND date('now','localtime','+14 day');
+
+SELECT 'profile-tables=' || COUNT(*) FROM sqlite_master WHERE type='table' AND name IN (
+  'profile_basic','education_experiences','work_experiences','project_experiences','academic_achievements',
+  'certificates','language_abilities','honors','family_members','emergency_contacts','profile_evaluation',
+  'profile_hobbies','proof_materials'
+);
+INSERT INTO profile_basic(name,phone,email) VALUES('profile-user','13800138000','profile@example.com');
+UPDATE profile_basic SET name='updated-user',updated_at=CURRENT_TIMESTAMP WHERE id=1;
+INSERT INTO education_experiences(school_name,education_level,sort_order) VALUES('test-university','master',0);
+INSERT INTO project_experiences(project_name,role,sort_order) VALUES('test-project','owner',0);
+INSERT INTO profile_evaluation(content) VALUES('responsible');
+INSERT INTO profile_hobbies(tags,description) VALUES('coding' || char(10) || 'sports','keep-learning');
+INSERT INTO proof_materials(display_name,original_name,file_path,file_extension,file_size,category)
+  VALUES('cet4-certificate','cet4.pdf','F:/portable/data/proof_materials/cet4.pdf','pdf',1024,'certificate');
+SELECT 'profile-crud=' || (SELECT name FROM profile_basic WHERE id=1) || ',' ||
+  (SELECT COUNT(*) FROM education_experiences) || ',' || (SELECT COUNT(*) FROM project_experiences) || ',' ||
+  (SELECT display_name FROM proof_materials WHERE id=1);
+DELETE FROM proof_materials WHERE id=1;
+SELECT 'proof-delete=' || COUNT(*) FROM proof_materials;
 '@
 
 $sql = ($statements -join ";`n") + ";`n" + $smokeSql
@@ -167,5 +186,12 @@ $workflowExpected = @('workflow-empty=0','workflow-written=2,2','workflow-failed
 foreach ($line in $workflowExpected) {
   if ($result -notcontains $line) {
     throw "Recruitment workflow acceptance test failed: expected $line"
+  }
+}
+
+$profileExpected = @('profile-tables=13','profile-crud=updated-user,1,1,cet4-certificate','proof-delete=0')
+foreach ($line in $profileExpected) {
+  if ($result -notcontains $line) {
+    throw "Personal profile acceptance test failed: expected $line"
   }
 }

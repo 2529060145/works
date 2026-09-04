@@ -86,6 +86,22 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '提醒中心' },
       },
       {
+        path: 'profile',
+        redirect: '/profile/basic',
+      },
+      {
+        path: 'profile/basic',
+        name: 'personal-profile',
+        component: () => import('../views/profile/PersonalProfileView.vue'),
+        meta: { title: '我的资料' },
+      },
+      {
+        path: 'profile/materials',
+        name: 'proof-materials',
+        component: () => import('../views/profile/ProofMaterialsView.vue'),
+        meta: { title: '证明材料' },
+      },
+      {
         path: 'data/import',
         name: 'excel-import',
         component: () => import('../views/data/ExcelImportView.vue'),

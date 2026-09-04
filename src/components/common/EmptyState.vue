@@ -10,6 +10,7 @@ defineProps<{
     <div class="empty-mark" aria-hidden="true"></div>
     <h2>{{ title }}</h2>
     <p v-if="description">{{ description }}</p>
+    <div v-if="$slots.default" class="empty-actions"><slot /></div>
   </div>
 </template>
 
@@ -49,5 +50,9 @@ p {
   margin: 8px 0 0;
   font-size: 14px;
   line-height: 1.7;
+}
+
+.empty-actions {
+  margin-top: 18px;
 }
 </style>

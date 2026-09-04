@@ -138,6 +138,77 @@ const migrations = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE
   )`,
+  `CREATE TABLE IF NOT EXISTS profile_basic (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, english_name TEXT, gender TEXT, birth_date TEXT, ethnicity TEXT,
+    political_status TEXT, marital_status TEXT, health_status TEXT, height TEXT, weight TEXT, current_residence TEXT,
+    household_location TEXT, native_place TEXT, student_origin TEXT, household_type TEXT, mailing_address TEXT,
+    phone TEXT, email TEXT, work_start_date TEXT, current_industry TEXT, specialties TEXT, student_leader TEXT,
+    overseas_work TEXT, disciplinary_record TEXT, photo_path TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS education_experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, school_name TEXT NOT NULL, start_date TEXT, end_date TEXT, is_current INTEGER NOT NULL DEFAULT 0,
+    duration_years TEXT, education_level TEXT, degree TEXT, degree_detail TEXT, study_type TEXT, admission_type TEXT,
+    college TEXT, major TEXT, major_category TEXT, research_direction TEXT, ranking TEXT, is_top_up_degree INTEGER NOT NULL DEFAULT 0,
+    is_overseas INTEGER NOT NULL DEFAULT 0, position TEXT, main_courses TEXT, failed_course_count INTEGER, remark TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS work_experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, company_name TEXT NOT NULL, company_type TEXT, industry TEXT, work_type TEXT,
+    position_name TEXT, start_date TEXT, end_date TEXT, is_current INTEGER NOT NULL DEFAULT 0, region TEXT, monthly_salary TEXT,
+    salary_unit TEXT, subordinate_count INTEGER, is_overseas INTEGER NOT NULL DEFAULT 0, responsibilities TEXT, reference_name TEXT,
+    reference_position TEXT, reference_phone TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS project_experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT NOT NULL, start_date TEXT, end_date TEXT, is_current INTEGER NOT NULL DEFAULT 0,
+    role TEXT, organization TEXT, team_size INTEGER, description TEXT, responsibilities TEXT, achievements TEXT, tech_stack TEXT,
+    remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS academic_achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, achievement_name TEXT NOT NULL, achievement_type TEXT, author_role TEXT, venue TEXT,
+    status TEXT, accepted_date TEXT, published_date TEXT, research_field TEXT, doi TEXT, remark TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS certificates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, certificate_name TEXT NOT NULL, obtained_date TEXT, level TEXT, score TEXT,
+    certificate_number TEXT, valid_until TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS language_abilities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, language TEXT NOT NULL, level TEXT, score TEXT, speaking_ability TEXT,
+    reading_ability TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS honors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, honor_name TEXT NOT NULL, obtained_date TEXT, honor_level TEXT, award_grade TEXT,
+    issuer TEXT, description TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS family_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, relationship TEXT, organization TEXT, position TEXT, phone TEXT,
+    remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS emergency_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, relationship TEXT, phone TEXT, organization TEXT, remark TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS profile_evaluation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS profile_hobbies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tags TEXT, description TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS proof_materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT NOT NULL, original_name TEXT NOT NULL, file_path TEXT NOT NULL,
+    file_extension TEXT NOT NULL, file_size INTEGER NOT NULL DEFAULT 0, category TEXT NOT NULL DEFAULT (char(26410,20998,31867)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS settings (
     setting_key TEXT PRIMARY KEY,
     setting_value TEXT NOT NULL,

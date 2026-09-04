@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Bell, Briefcase, Calendar, CollectionTag, DataAnalysis, Download, Files,
-  OfficeBuilding, Setting, Tickets, Upload, UserFilled,
+  OfficeBuilding, Setting, Tickets, Upload, User, UserFilled,
 } from '@element-plus/icons-vue'
 
 defineProps<{
@@ -23,6 +23,8 @@ const icon = computed(() => {
   if (path.startsWith('/statistics')) return DataAnalysis
   if (path.startsWith('/tags')) return CollectionTag
   if (path.startsWith('/reminders')) return Bell
+  if (path.startsWith('/profile/basic')) return User
+  if (path.startsWith('/profile/materials')) return Files
   if (path.startsWith('/data/import')) return Upload
   if (path.startsWith('/data/export')) return Download
   if (path.startsWith('/data/backup')) return Files

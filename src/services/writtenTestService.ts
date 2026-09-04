@@ -1,6 +1,7 @@
 import type { WrittenTest, WrittenTestInput } from '../types/writtenTest'
 import { execute, select, transaction } from './databaseService'
 import { createWrittenTest } from './recruitmentWorkflowService'
+import { notifyRemindersChanged } from './reminderService'
 
 export async function listWrittenTests() {
   return select<WrittenTest>(`SELECT w.id, w.job_id AS "jobId", c.company_name AS "companyName", j.job_name AS "jobName",
@@ -14,6 +15,7 @@ export async function saveWrittenTest(input: WrittenTestInput, id?: number) {
   if (input.result === 'FAILED') statements.push({ query: "UPDATE applications SET stage='REJECTED',result='FAILED',result_reason='笔试未通过',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", values: [input.jobId] })
   else statements.push({ query: "UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='REJECTED' AND result_reason='笔试未通过'", values: [input.jobId] })
   await transaction(statements)
+  notifyRemindersChanged()
 }
 
-export async function deleteWrittenTest(id: number) { await execute('DELETE FROM written_tests WHERE id=?', [id]) }
+export async function deleteWrittenTest(id: number) { await execute('DELETE FROM written_tests WHERE id=?', [id]); notifyRemindersChanged() }

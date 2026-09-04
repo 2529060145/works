@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Briefcase, Expand, Fold } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowRight, Briefcase, Document, Expand, Fold, User } from '@element-plus/icons-vue'
 import { dataNavItems, primaryNavItems } from '../../constants/routes'
 import { useAppStore } from '../../stores/app'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const profileExpanded = ref(route.path.startsWith('/profile'))
 
 const activePath = computed(() => {
   if (route.path.startsWith('/jobs')) return '/jobs'
@@ -18,8 +19,21 @@ const activePath = computed(() => {
   return route.path
 })
 
+watch(() => route.path, (path) => {
+  if (path.startsWith('/profile')) profileExpanded.value = true
+})
+
 function navigate(path: string) {
   router.push(path)
+}
+
+
+function toggleProfile() {
+  if (appStore.sidebarCollapsed) {
+    router.push('/profile/basic')
+    return
+  }
+  profileExpanded.value = !profileExpanded.value
 }
 </script>
 
@@ -50,6 +64,40 @@ function navigate(path: string) {
         </button>
       </nav>
 
+
+      <nav class="nav-group profile-nav">
+        <button
+          class="nav-item profile-parent"
+          :class="{ active: activePath.startsWith('/profile') }"
+          type="button"
+          @click="toggleProfile"
+        >
+          <el-icon><User /></el-icon>
+          <span v-if="!appStore.sidebarCollapsed">个人资料与简历</span>
+          <el-icon v-if="!appStore.sidebarCollapsed" class="profile-arrow">
+            <component :is="profileExpanded ? ArrowDown : ArrowRight" />
+          </el-icon>
+        </button>
+        <div v-if="profileExpanded && !appStore.sidebarCollapsed" class="profile-children">
+          <button
+            class="profile-child"
+            :class="{ active: activePath === '/profile/basic' }"
+            type="button"
+            @click="navigate('/profile/basic')"
+          >
+            <el-icon><User /></el-icon><span>我的资料</span>
+          </button>
+          <button
+            class="profile-child"
+            :class="{ active: activePath === '/profile/materials' }"
+            type="button"
+            @click="navigate('/profile/materials')"
+          >
+            <el-icon><Document /></el-icon><span>证明材料</span>
+          </button>
+        </div>
+      </nav>
+
       <div class="nav-divider">
         <span v-if="!appStore.sidebarCollapsed">数据管理</span>
       </div>
@@ -73,7 +121,7 @@ function navigate(path: string) {
       <button class="collapse-btn" type="button" @click="appStore.toggleSidebar()">
         <el-icon><component :is="appStore.sidebarCollapsed ? Expand : Fold" /></el-icon>
       </button>
-      <span v-if="!appStore.sidebarCollapsed">v0.1.11</span>
+      <span v-if="!appStore.sidebarCollapsed">v0.2.0</span>
     </div>
   </aside>
 </template>
@@ -216,6 +264,50 @@ function navigate(path: string) {
     font-size: 13px;
     font-weight: 500;
   }
+}
+
+.profile-nav {
+  margin-top: 4px;
+}
+
+.profile-parent .profile-arrow {
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.profile-children {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 4px 24px;
+  padding-left: 9px;
+  border-left: 2px solid #d9d2ff;
+}
+
+.profile-child {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #667085;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+
+  .el-icon { font-size: 16px; }
+
+  &:hover,
+  &.active {
+    color: #6254d9;
+    background: #f0edff;
+  }
+
+  &.active { font-weight: 600; }
 }
 
 .sidebar-footer {

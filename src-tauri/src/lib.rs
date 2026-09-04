@@ -49,6 +49,54 @@ struct StoredAttachment {
     stored_path: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredProfileFile {
+    original_name: String,
+    stored_path: String,
+    file_extension: String,
+    file_size: u64,
+}
+
+fn profile_file_metadata(source: &Path, category: &str) -> Result<(String, String, u64), String> {
+    if !source.is_file() {
+        return Err("选择的文件不存在".to_string());
+    }
+    let original_name = source
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "文件名无效".to_string())?
+        .to_string();
+    let extension = source
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let allowed = match category {
+        "proof_materials" => ["pdf", "doc", "docx"].contains(&extension.as_str()),
+        "profile_photo" => ["jpg", "jpeg", "png"].contains(&extension.as_str()),
+        _ => false,
+    };
+    if !allowed {
+        return Err("不支持的文件类型".to_string());
+    }
+    let size = source.metadata().map_err(|error| error.to_string())?.len();
+    Ok((original_name, extension, size))
+}
+
+#[tauri::command]
+fn inspect_profile_file(source: String, category: String) -> Result<StoredProfileFile, String> {
+    let source_path = PathBuf::from(&source);
+    let (original_name, file_extension, file_size) =
+        profile_file_metadata(&source_path, &category)?;
+    Ok(StoredProfileFile {
+        original_name,
+        stored_path: source,
+        file_extension,
+        file_size,
+    })
+}
+
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().into_owned()
 }
@@ -314,9 +362,64 @@ fn copy_attachment(
 }
 
 #[tauri::command]
+fn copy_profile_file(
+    state: State<'_, PortableDatabase>,
+    source: String,
+    category: String,
+) -> Result<StoredProfileFile, String> {
+    let source_path = PathBuf::from(source);
+    let (original_name, file_extension, _) = profile_file_metadata(&source_path, &category)?;
+    let safe_name: String = original_name
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() || ".-_".contains(character) {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let directory = state.data_directory.join(&category);
+    fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos();
+    let destination = directory.join(format!("{}_{}", stamp, safe_name));
+    let file_size = fs::copy(&source_path, &destination).map_err(|error| error.to_string())?;
+    Ok(StoredProfileFile {
+        original_name,
+        stored_path: display_path(&destination),
+        file_extension,
+        file_size,
+    })
+}
+
+#[tauri::command]
 fn delete_portable_file(state: State<'_, PortableDatabase>, path: String) -> Result<(), String> {
     let path = ensure_inside_data_directory(&state, Path::new(&path))?;
     fs::remove_file(path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn delete_managed_file(state: State<'_, PortableDatabase>, path: String) -> Result<(), String> {
+    let requested = PathBuf::from(&path);
+    if requested.exists() {
+        let managed = ensure_inside_data_directory(&state, &requested)?;
+        return fs::remove_file(managed).map_err(|error| error.to_string());
+    }
+    let parent = requested
+        .parent()
+        .ok_or_else(|| "文件路径无效".to_string())?;
+    let canonical_parent = parent.canonicalize().map_err(|error| error.to_string())?;
+    let canonical_data = state
+        .data_directory
+        .canonicalize()
+        .map_err(|error| error.to_string())?;
+    if !canonical_parent.starts_with(canonical_data) {
+        return Err("拒绝访问程序数据目录之外的文件".to_string());
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -325,6 +428,17 @@ fn open_portable_path(state: State<'_, PortableDatabase>, path: String) -> Resul
     #[cfg(target_os = "windows")]
     std::process::Command::new("explorer")
         .arg(path)
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn reveal_portable_file(state: State<'_, PortableDatabase>, path: String) -> Result<(), String> {
+    let path = ensure_inside_data_directory(&state, Path::new(&path))?;
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer")
+        .arg(format!("/select,{}", display_path(&path)))
         .spawn()
         .map_err(|error| error.to_string())?;
     Ok(())
@@ -357,8 +471,12 @@ pub fn run() {
             backup_database,
             restore_database,
             copy_attachment,
+            copy_profile_file,
+            inspect_profile_file,
             delete_portable_file,
+            delete_managed_file,
             open_portable_path,
+            reveal_portable_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

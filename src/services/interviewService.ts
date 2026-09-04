@@ -1,6 +1,7 @@
 import type { Interview, InterviewInput } from '../types/interview'
 import { execute, select, transaction } from './databaseService'
 import { createInterview } from './recruitmentWorkflowService'
+import { notifyRemindersChanged } from './reminderService'
 
 export async function listInterviews() {
   return select<Interview>(`SELECT i.id, i.job_id AS "jobId", c.company_name AS "companyName", j.job_name AS "jobName",
@@ -14,6 +15,7 @@ export async function saveInterview(input: InterviewInput, id?: number) {
   if (input.result === 'FAILED') statements.push({ query: "UPDATE applications SET stage='REJECTED',result='FAILED',result_reason='面试未通过',updated_at=CURRENT_TIMESTAMP WHERE job_id=?", values: [input.jobId] })
   else statements.push({ query: "UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='REJECTED' AND result_reason='面试未通过'", values: [input.jobId] })
   await transaction(statements)
+  notifyRemindersChanged()
 }
 
-export async function deleteInterview(id: number) { await execute('DELETE FROM interviews WHERE id=?', [id]) }
+export async function deleteInterview(id: number) { await execute('DELETE FROM interviews WHERE id=?', [id]); notifyRemindersChanged() }

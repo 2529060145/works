@@ -1,26 +1,33 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import { isTauriRuntime } from '../../services/databaseService'
-import { countReminders } from '../../services/reminderService'
+import { countReminders, REMINDERS_CHANGED_EVENT } from '../../services/reminderService'
 import { getSettings } from '../../services/settingsService'
 import { useReminderStore } from '../../stores/reminder'
 import { useSettingsStore } from '../../stores/settings'
 
 const reminderStore=useReminderStore(),settingsStore=useSettingsStore()
+const route=useRoute()
+async function refreshReminders(){if(!isTauriRuntime()){reminderStore.setUnreadCount(0);return}try{reminderStore.setUnreadCount(await countReminders())}catch(error){console.error('Reminders failed to refresh',error)}}
 onMounted(async()=>{
   if(!isTauriRuntime()){settingsStore.applyTheme();return}
   try {
-    const [settings,count]=await Promise.all([getSettings(),countReminders()])
+    const settings=await getSettings()
     settingsStore.userName=settings.user_name||'用户'
     settingsStore.theme=settings.theme==='dark'?'dark':'light'
     settingsStore.applyTheme()
-    reminderStore.setUnreadCount(count)
   } catch (error) {
     console.error('Application settings failed to load', error)
   }
+  await refreshReminders()
+  window.addEventListener(REMINDERS_CHANGED_EVENT,refreshReminders)
+  window.addEventListener('focus',refreshReminders)
 })
+watch(()=>route.fullPath,refreshReminders)
+onBeforeUnmount(()=>{window.removeEventListener(REMINDERS_CHANGED_EVENT,refreshReminders);window.removeEventListener('focus',refreshReminders)})
 </script>
 
 <template>

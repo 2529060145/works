@@ -4,6 +4,7 @@ const routes = [
   ['/home', '今天是'], ['/jobs', '岗位库'], ['/companies', '企业管理'], ['/progress', '投递进度'],
   ['/schedule', '日程安排'], ['/workflow', '招聘流程'],
   ['/statistics', '数据统计'], ['/tags', '标签管理'], ['/reminders', '提醒中心'],
+  ['/profile/basic', '我的资料'], ['/profile/materials', '证明材料'],
   ['/data/import', 'Excel 导入'], ['/data/export', 'Excel 导出'], ['/data/backup', '备份与恢复'], ['/settings', '系统设置'],
 ] as const
 
@@ -72,9 +73,9 @@ test('progress board is view-only and exposes all filters', async ({ page }) => 
 
 test('schedule renders month calendar controls and dashboard exposes trend ranges', async ({ page }) => {
   await page.goto('/schedule')
-  await expect(page.getByText('本月事件', { exact: true })).toBeVisible()
-  await expect(page.getByText('有安排日期', { exact: true })).toBeVisible()
-  await expect(page.getByText('截止提醒', { exact: true })).toBeVisible()
+  await expect(page.getByText('本月安排', { exact: true })).toBeVisible()
+  await expect(page.getByText('笔试安排', { exact: true })).toBeVisible()
+  await expect(page.getByText('面试安排', { exact: true })).toBeVisible()
   await expect(page.getByTitle('上一个月')).toBeVisible()
   await expect(page.getByTitle('下一个月')).toBeVisible()
   expect(await page.locator('.day-cell').count()).toBeGreaterThanOrEqual(35)
@@ -136,14 +137,45 @@ test('job library exposes grouped management controls', async ({ page }) => {
 })
 
 test('desktop layouts do not overflow horizontally', async ({ page }) => {
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 1050, height: 800 }]) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }, { width: 1050, height: 800 }]) {
     await page.setViewportSize(viewport)
-    for (const path of ['/home', '/jobs', '/progress', '/workflow', '/settings']) {
+    for (const path of ['/home', '/jobs', '/progress', '/workflow', '/profile/basic', '/profile/materials', '/settings']) {
       await page.goto(path)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
       expect(overflow, `${path} overflows at ${viewport.width}px`).toBeFalsy()
     }
   }
+})
+
+test('personal profile section expands and exposes only the requested child pages', async ({ page }) => {
+  await page.goto('/home')
+  const parent = page.getByRole('button', { name: '个人资料与简历', exact: true })
+  await expect(parent).toBeVisible()
+  await expect(page.getByRole('button', { name: '我的资料', exact: true })).toHaveCount(0)
+  await parent.click()
+  await expect(page.getByRole('button', { name: '我的资料', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '证明材料', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '简历库', exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: '我的资料', exact: true }).click()
+  await expect(page).toHaveURL(/\/profile\/basic$/)
+  await expect(page.getByRole('heading', { name: '我的资料', exact: true })).toBeVisible()
+  await expect(page.getByText('基本信息', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('项目经历', { exact: true }).first()).toBeVisible()
+
+  await page.getByRole('button', { name: '证明材料', exact: true }).click()
+  await expect(page).toHaveURL(/\/profile\/materials$/)
+  await expect(page.getByRole('heading', { name: '证明材料', exact: true })).toBeVisible()
+})
+
+test('proof material upload presents supported formats and requires a display name', async ({ page }) => {
+  await page.goto('/profile/materials')
+  await page.getByRole('button', { name: '上传材料', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: '上传证明材料' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('选择 PDF 或 Word 文件', { exact: true })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: '确认上传', exact: true })).toBeDisabled()
+  await expect(dialog.getByText('备注名称不会修改原文件名', { exact: false })).toBeVisible()
 })
 
 test('page content and long dialogs scroll vertically', async ({ page }) => {

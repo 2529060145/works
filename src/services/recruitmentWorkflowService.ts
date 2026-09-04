@@ -2,6 +2,7 @@ import type { ApplicationStage } from '../types/application'
 import type { InterviewForm, InterviewRound } from '../types/interview'
 import type { WorkflowNodeResult, WorkflowNodeStatus, WrittenTestForm } from '../types/writtenTest'
 import { select, transaction, type TransactionStatement } from './databaseService'
+import { notifyRemindersChanged } from './reminderService'
 
 export type WorkflowNodeType = 'WRITTEN_TEST' | 'INTERVIEW'
 
@@ -164,6 +165,7 @@ export async function restoreProcessToApplied(jobId: number) {
       WHERE job_id=? AND (status IN ('WAITING','PENDING_SCHEDULE','SCHEDULED') OR result IN ('PENDING','FAILED'))`, values: [jobId] },
     { query: "UPDATE applications SET stage='APPLIED',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage IN ('PROCESS','REJECTED')", values: [jobId] },
   ])
+  notifyRemindersChanged()
 }
 
 export async function undoWorkflowFailure(node: WorkflowNode) {
@@ -173,6 +175,7 @@ export async function undoWorkflowFailure(node: WorkflowNode) {
     { query: `UPDATE ${table} SET status='COMPLETED',result='PENDING',updated_at=CURRENT_TIMESTAMP WHERE id=? AND result='FAILED'`, values: [node.id] },
     { query: "UPDATE applications SET stage='PROCESS',result='PENDING',result_reason=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=? AND stage='REJECTED'", values: [node.jobId] },
   ])
+  notifyRemindersChanged()
 }
 
 export async function createWrittenTest(input: WrittenWorkflowInput) {
@@ -180,12 +183,14 @@ export async function createWrittenTest(input: WrittenWorkflowInput) {
   const sequence = await select<{ value: number }>('SELECT COALESCE(MAX(sequence_no),0)+1 AS value FROM written_tests WHERE job_id=?', [input.jobId])
   await transaction([{ query: `INSERT INTO written_tests(job_id,sequence_no,scheduled_at,time_tbd,form,test_type,location,meeting_url,status,result,notes)
     VALUES (?,?,?,?,?,?,?,?, 'SCHEDULED','PENDING',?)`, values: [input.jobId, Number(sequence[0]?.value ?? 1), input.scheduledAt, input.timeTbd ? 1 : 0, input.form, input.testType || null, input.location || null, input.meetingUrl || null, input.notes || null] }])
+  notifyRemindersChanged()
 }
 
 export async function createInterview(input: InterviewWorkflowInput) {
   await assertCanCreate(input.jobId)
   await transaction([{ query: `INSERT INTO interviews(job_id,round,scheduled_at,time_tbd,form,interview_type,location,meeting_url,interviewer,status,result,notes)
     VALUES (?,?,?,?,?,?,?,?,?,'SCHEDULED','PENDING',?)`, values: [input.jobId, input.round, input.scheduledAt, input.timeTbd ? 1 : 0, input.form, input.interviewType || null, input.location || null, input.meetingUrl || null, input.interviewer || null, input.notes || null] }])
+  notifyRemindersChanged()
 }
 
 export async function updateWorkflowNode(node: WorkflowNode, status: WorkflowNodeStatus, result: WorkflowNodeResult) {
@@ -194,6 +199,7 @@ export async function updateWorkflowNode(node: WorkflowNode, status: WorkflowNod
   const statements: TransactionStatement[] = [{ query: `UPDATE ${table} SET status=?,result=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`, values: [status, result, node.id] }]
   if (result === 'FAILED') statements.push({ query: `UPDATE applications SET stage='REJECTED',result='FAILED',result_reason=?,updated_at=CURRENT_TIMESTAMP WHERE job_id=?`, values: [`${node.label}未通过`, node.jobId] })
   await transaction(statements)
+  notifyRemindersChanged()
 }
 
 export async function finishAsOffer(jobId: number) {
