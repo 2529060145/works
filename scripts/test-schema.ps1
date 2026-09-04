@@ -146,6 +146,8 @@ SELECT 'profile-tables=' || COUNT(*) FROM sqlite_master WHERE type='table' AND n
   'certificates','language_abilities','honors','family_members','emergency_contacts','profile_evaluation',
   'profile_hobbies','proof_materials'
 );
+SELECT 'profile-option-columns=' || ((SELECT COUNT(*) FROM pragma_table_info('profile_basic') WHERE name='work_status') +
+  (SELECT COUNT(*) FROM pragma_table_info('certificates') WHERE name IN ('validity_type','valid_from')));
 INSERT INTO profile_basic(name,phone,email) VALUES('profile-user','13800138000','profile@example.com');
 UPDATE profile_basic SET name='updated-user',updated_at=CURRENT_TIMESTAMP WHERE id=1;
 INSERT INTO education_experiences(school_name,education_level,sort_order) VALUES('test-university','master',0);
@@ -189,7 +191,7 @@ foreach ($line in $workflowExpected) {
   }
 }
 
-$profileExpected = @('profile-tables=13','profile-crud=updated-user,1,1,cet4-certificate','proof-delete=0')
+$profileExpected = @('profile-tables=13','profile-option-columns=3','profile-crud=updated-user,1,1,cet4-certificate','proof-delete=0')
 foreach ($line in $profileExpected) {
   if ($result -notcontains $line) {
     throw "Personal profile acceptance test failed: expected $line"

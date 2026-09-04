@@ -18,6 +18,7 @@ export interface ProfileBasic {
   mailing_address?: string
   phone?: string
   email?: string
+  work_status?: string
   work_start_date?: string
   current_industry?: string
   specialties?: string
@@ -54,6 +55,10 @@ export interface ProfileField {
   label: string
   type?: 'text' | 'textarea' | 'date' | 'month' | 'number' | 'select' | 'switch'
   options?: string[]
+  allowCreate?: boolean
+  multiple?: boolean
+  defaultValue?: string | boolean | string[]
+  visibleWhen?: { key: string; value: string | boolean }
   required?: boolean
   wide?: boolean
 }

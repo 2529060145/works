@@ -143,6 +143,10 @@ test('desktop layouts do not overflow horizontally', async ({ page }) => {
       await page.goto(path)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
       expect(overflow, `${path} overflows at ${viewport.width}px`).toBeFalsy()
+      const contentOverflow = await page.locator('.app-content').evaluate(
+        element => element.scrollWidth > element.clientWidth + 1,
+      )
+      expect(contentOverflow, `${path} content overflows at ${viewport.width}px`).toBeFalsy()
     }
   }
 })
@@ -161,7 +165,22 @@ test('personal profile section expands and exposes only the requested child page
   await expect(page).toHaveURL(/\/profile\/basic$/)
   await expect(page.getByRole('heading', { name: '我的资料', exact: true })).toBeVisible()
   await expect(page.getByText('基本信息', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('项目经历', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: '教育经历', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '工作 / 实习', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '项目经历', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '学术成果', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '资格证书', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '荣誉奖励', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '自我评价', exact: true })).toBeVisible()
+  await page.screenshot({ path: 'test-artifacts/profile-all-sections-v0.2.1.png', fullPage: true })
+  await page.getByRole('tab', { name: '项目经历', exact: true }).click()
+  await page.waitForTimeout(500)
+  const projectTop = await page.locator('#profile-section-projects').evaluate(
+    element => element.getBoundingClientRect().top,
+  )
+  expect(projectTop).toBeGreaterThanOrEqual(60)
+  expect(projectTop).toBeLessThan(180)
+  await page.screenshot({ path: 'test-artifacts/profile-project-section-v0.2.1.png' })
 
   await page.getByRole('button', { name: '证明材料', exact: true }).click()
   await expect(page).toHaveURL(/\/profile\/materials$/)
@@ -176,6 +195,30 @@ test('proof material upload presents supported formats and requires a display na
   await expect(dialog.getByText('选择 PDF 或 Word 文件', { exact: true })).toBeVisible()
   await expect(dialog.getByRole('button', { name: '确认上传', exact: true })).toBeDisabled()
   await expect(dialog.getByText('备注名称不会修改原文件名', { exact: false })).toBeVisible()
+})
+
+test('profile forms use standardized selects and conditional fields', async ({ page }) => {
+  await page.goto('/profile/basic')
+  await expect(page.locator('.tab-label')).toHaveCount(12)
+  await page.getByRole('button', { name: '编辑资料', exact: true }).click()
+  const drawer = page.locator('.el-drawer')
+  await expect(drawer).toBeVisible()
+  await expect(drawer.getByText('政治面貌', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('健康状况', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('户口类型', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('工作经历状态', { exact: true })).toBeVisible()
+  await expect(drawer.getByText('参加工作时间', { exact: true })).toHaveCount(0)
+  expect(await drawer.locator('.el-select').count()).toBeGreaterThanOrEqual(9)
+})
+
+test('proof materials expose quick type and category filters', async ({ page }) => {
+  await page.goto('/profile/materials')
+  await expect(page.getByRole('button', { name: 'PDF', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Word', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '资格证书', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '论文材料', exact: true })).toBeVisible()
+  await expect(page.getByTitle('刷新材料')).toBeVisible()
+  await page.screenshot({ path: 'test-artifacts/materials-filters-v0.2.1.png', fullPage: true })
 })
 
 test('page content and long dialogs scroll vertically', async ({ page }) => {

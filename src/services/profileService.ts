@@ -8,14 +8,14 @@ const tableColumns: Record<ProfileEntityTable, string[]> = {
   work_experiences: ['company_name','company_type','industry','work_type','position_name','start_date','end_date','is_current','region','monthly_salary','salary_unit','subordinate_count','is_overseas','responsibilities','reference_name','reference_position','reference_phone','remark'],
   project_experiences: ['project_name','start_date','end_date','is_current','role','organization','team_size','description','responsibilities','achievements','tech_stack','remark'],
   academic_achievements: ['achievement_name','achievement_type','author_role','venue','status','accepted_date','published_date','research_field','doi','remark'],
-  certificates: ['certificate_name','obtained_date','level','score','certificate_number','valid_until','remark'],
+  certificates: ['certificate_name','obtained_date','level','score','certificate_number','validity_type','valid_from','valid_until','remark'],
   language_abilities: ['language','level','score','speaking_ability','reading_ability','remark'],
   honors: ['honor_name','obtained_date','honor_level','award_grade','issuer','description','remark'],
   family_members: ['name','relationship','organization','position','phone','remark'],
   emergency_contacts: ['name','relationship','phone','organization','remark'],
 }
 
-const basicColumns = ['name','english_name','gender','birth_date','ethnicity','political_status','marital_status','health_status','height','weight','current_residence','household_location','native_place','student_origin','household_type','mailing_address','phone','email','work_start_date','current_industry','specialties','student_leader','overseas_work','disciplinary_record','photo_path']
+const basicColumns = ['name','english_name','gender','birth_date','ethnicity','political_status','marital_status','health_status','height','weight','current_residence','household_location','native_place','student_origin','household_type','mailing_address','phone','email','work_status','work_start_date','current_industry','specialties','student_leader','overseas_work','disciplinary_record','photo_path']
 
 function cleanValues(source: Record<string, unknown>, columns: string[]) {
   return Object.fromEntries(columns.filter(column => column in source).map(column => [column, source[column] === '' ? null : source[column]]))

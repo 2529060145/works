@@ -142,7 +142,7 @@ const migrations = [
     id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, english_name TEXT, gender TEXT, birth_date TEXT, ethnicity TEXT,
     political_status TEXT, marital_status TEXT, health_status TEXT, height TEXT, weight TEXT, current_residence TEXT,
     household_location TEXT, native_place TEXT, student_origin TEXT, household_type TEXT, mailing_address TEXT,
-    phone TEXT, email TEXT, work_start_date TEXT, current_industry TEXT, specialties TEXT, student_leader TEXT,
+    phone TEXT, email TEXT, work_status TEXT, work_start_date TEXT, current_industry TEXT, specialties TEXT, student_leader TEXT,
     overseas_work TEXT, disciplinary_record TEXT, photo_path TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -173,7 +173,7 @@ const migrations = [
   )`,
   `CREATE TABLE IF NOT EXISTS certificates (
     id INTEGER PRIMARY KEY AUTOINCREMENT, certificate_name TEXT NOT NULL, obtained_date TEXT, level TEXT, score TEXT,
-    certificate_number TEXT, valid_until TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    certificate_number TEXT, validity_type TEXT, valid_from TEXT, valid_until TEXT, remark TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS language_abilities (
@@ -245,6 +245,11 @@ export async function initializeDatabase() {
     await database.execute('ALTER TABLE applications ADD COLUMN submitted_at TEXT')
     await database.execute("UPDATE applications SET submitted_at=application_date||' 12:00:00' WHERE application_date IS NOT NULL")
   }
+  const profileColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(profile_basic)')).map(column => column.name))
+  if (!profileColumns.has('work_status')) await database.execute('ALTER TABLE profile_basic ADD COLUMN work_status TEXT')
+  const certificateColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(certificates)')).map(column => column.name))
+  if (!certificateColumns.has('validity_type')) await database.execute('ALTER TABLE certificates ADD COLUMN validity_type TEXT')
+  if (!certificateColumns.has('valid_from')) await database.execute('ALTER TABLE certificates ADD COLUMN valid_from TEXT')
   const writtenColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(written_tests)')).map(column => column.name))
   if (!writtenColumns.has('sequence_no')) await database.execute('ALTER TABLE written_tests ADD COLUMN sequence_no INTEGER NOT NULL DEFAULT 1')
   if (!writtenColumns.has('time_tbd')) await database.execute('ALTER TABLE written_tests ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0')
