@@ -16,7 +16,7 @@ if (Test-Path -LiteralPath $databasePath) {
 }
 
 $source = Get-Content -Raw -LiteralPath $sourcePath
-$block = [regex]::Match($source, '(?s)const migrations = \[(.*?)\]\r?\n\r?\nexport function').Groups[1].Value
+$block = [regex]::Match($source, '(?s)const migrations = \[(.*?)\];?\r?\n\r?\nexport function').Groups[1].Value
 $matches = [regex]::Matches($block, '(?s)`([^`]*)`|''([^'']*)''')
 $statements = foreach ($match in $matches) {
   if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }

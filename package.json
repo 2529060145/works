@@ -1,7 +1,7 @@
 {
   "name": "job-manager",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,8 +20,10 @@
     "@tauri-apps/plugin-dialog": "2.7.3",
     "@tauri-apps/plugin-fs": "2.5.2",
     "@tauri-apps/plugin-opener": "2.5.5",
+    "docx-preview": "^0.3.6",
     "echarts": "6.1.0",
     "element-plus": "2.14.5",
+    "pdfjs-dist": "^4.10.38",
     "pinia": "2.1.7",
     "vue": "3.3.13",
     "vue-router": "4.2.5",
@@ -31,6 +33,7 @@
     "@playwright/test": "^1.40.1",
     "@tauri-apps/cli": "2.11.4",
     "@vitejs/plugin-vue": "^4.6.2",
+    "prettier": "^3.3.3",
     "sass": "1.69.7",
     "typescript": "5.2.2",
     "vite": "4.5.14",

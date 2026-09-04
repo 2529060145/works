@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use rusqlite::{
     backup::Backup,
     params_from_iter,
@@ -58,6 +59,13 @@ struct StoredProfileFile {
     file_size: u64,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManagedFileContent {
+    content_base64: String,
+    mime_type: String,
+}
+
 fn profile_file_metadata(source: &Path, category: &str) -> Result<(String, String, u64), String> {
     if !source.is_file() {
         return Err("选择的文件不存在".to_string());
@@ -74,7 +82,7 @@ fn profile_file_metadata(source: &Path, category: &str) -> Result<(String, Strin
         .to_ascii_lowercase();
     let allowed = match category {
         "proof_materials" => ["pdf", "doc", "docx"].contains(&extension.as_str()),
-        "profile_photo" => ["jpg", "jpeg", "png"].contains(&extension.as_str()),
+        "profile_photo" => ["jpg", "jpeg", "png", "webp"].contains(&extension.as_str()),
         _ => false,
     };
     if !allowed {
@@ -94,6 +102,33 @@ fn inspect_profile_file(source: String, category: String) -> Result<StoredProfil
         stored_path: source,
         file_extension,
         file_size,
+    })
+}
+
+#[tauri::command]
+fn read_managed_file(
+    state: State<'_, PortableDatabase>,
+    path: String,
+) -> Result<ManagedFileContent, String> {
+    let path = ensure_inside_data_directory(&state, Path::new(&path))?;
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let mime_type = match extension.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "pdf" => "application/pdf",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "doc" => "application/msword",
+        _ => "application/octet-stream",
+    };
+    let bytes = fs::read(path).map_err(|error| error.to_string())?;
+    Ok(ManagedFileContent {
+        content_base64: BASE64.encode(bytes),
+        mime_type: mime_type.to_string(),
     })
 }
 
@@ -473,6 +508,7 @@ pub fn run() {
             copy_attachment,
             copy_profile_file,
             inspect_profile_file,
+            read_managed_file,
             delete_portable_file,
             delete_managed_file,
             open_portable_path,
@@ -485,6 +521,17 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temporary_file(extension: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("job-manager-profile-{unique}.{extension}"));
+        fs::write(&path, b"test").unwrap();
+        path
+    }
 
     #[test]
     fn portable_data_directory_follows_executable() {
@@ -508,5 +555,23 @@ mod tests {
             .query_row("SELECT name FROM sample WHERE id = 1", [], |row| row.get(0))
             .unwrap();
         assert_eq!(name, "岗位");
+    }
+
+    #[test]
+    fn profile_photo_accepts_supported_image_formats() {
+        for extension in ["jpg", "jpeg", "png", "webp"] {
+            let path = temporary_file(extension);
+            let metadata = profile_file_metadata(&path, "profile_photo").unwrap();
+            assert_eq!(metadata.1, extension);
+            fs::remove_file(path).unwrap();
+        }
+    }
+
+    #[test]
+    fn profile_photo_rejects_unsupported_files() {
+        let path = temporary_file("gif");
+        let result = profile_file_metadata(&path, "profile_photo");
+        fs::remove_file(path).unwrap();
+        assert_eq!(result.unwrap_err(), "不支持的文件类型");
     }
 }

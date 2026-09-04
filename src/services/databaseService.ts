@@ -1,31 +1,32 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from "@tauri-apps/api/core";
 
 export interface ExecuteResult {
-  rowsAffected: number
-  lastInsertId: number
+  rowsAffected: number;
+  lastInsertId: number;
 }
 
 interface DatabaseClient {
-  execute(query: string, values?: unknown[]): Promise<ExecuteResult>
-  select<T>(query: string, values?: unknown[]): Promise<T>
+  execute(query: string, values?: unknown[]): Promise<ExecuteResult>;
+  select<T>(query: string, values?: unknown[]): Promise<T>;
 }
 
 export interface TransactionStatement {
-  query: string
-  values?: unknown[]
+  query: string;
+  values?: unknown[];
 }
 
 export interface PortableDataPaths {
-  dataDirectory: string
-  databasePath: string
-  attachmentDirectory: string
+  dataDirectory: string;
+  databasePath: string;
+  attachmentDirectory: string;
 }
 
 const database: DatabaseClient = {
-  execute: (query, values = []) => invoke('database_execute', { query, values }),
-  select: (query, values = []) => invoke('database_select', { query, values }),
-}
-let initialized = false
+  execute: (query, values = []) =>
+    invoke("database_execute", { query, values }),
+  select: (query, values = []) => invoke("database_select", { query, values }),
+};
+let initialized = false;
 
 const migrations = [
   `CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -214,94 +215,192 @@ const migrations = [
     setting_value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
-  'CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company_id)',
-  'CREATE INDEX IF NOT EXISTS idx_jobs_deadline ON jobs(deadline)',
-  'CREATE INDEX IF NOT EXISTS idx_applications_stage ON applications(stage)',
-  'CREATE INDEX IF NOT EXISTS idx_written_tests_time ON written_tests(scheduled_at)',
-  'CREATE INDEX IF NOT EXISTS idx_interviews_time ON interviews(scheduled_at)',
-]
+  "CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company_id)",
+  "CREATE INDEX IF NOT EXISTS idx_jobs_deadline ON jobs(deadline)",
+  "CREATE INDEX IF NOT EXISTS idx_applications_stage ON applications(stage)",
+  "CREATE INDEX IF NOT EXISTS idx_written_tests_time ON written_tests(scheduled_at)",
+  "CREATE INDEX IF NOT EXISTS idx_interviews_time ON interviews(scheduled_at)",
+];
 
 export function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
 export async function initializeDatabase() {
-  if (initialized || !isTauriRuntime()) return
-  await database.execute('PRAGMA foreign_keys = ON')
-  for (const statement of migrations) await database.execute(statement)
-  const companyColumns = await database.select<{ name: string }[]>('PRAGMA table_info(companies)')
-  const existingCompanyColumns = new Set(companyColumns.map(column => column.name))
-  if (!existingCompanyColumns.has('application_limit_type')) {
-    await database.execute("ALTER TABLE companies ADD COLUMN application_limit_type TEXT NOT NULL DEFAULT 'UNKNOWN'")
+  if (initialized || !isTauriRuntime()) return;
+  await database.execute("PRAGMA foreign_keys = ON");
+  for (const statement of migrations) await database.execute(statement);
+  const companyColumns = await database.select<{ name: string }[]>(
+    "PRAGMA table_info(companies)",
+  );
+  const existingCompanyColumns = new Set(
+    companyColumns.map((column) => column.name),
+  );
+  if (!existingCompanyColumns.has("application_limit_type")) {
+    await database.execute(
+      "ALTER TABLE companies ADD COLUMN application_limit_type TEXT NOT NULL DEFAULT 'UNKNOWN'",
+    );
   }
-  if (!existingCompanyColumns.has('max_applications')) {
-    await database.execute('ALTER TABLE companies ADD COLUMN max_applications INTEGER')
+  if (!existingCompanyColumns.has("max_applications")) {
+    await database.execute(
+      "ALTER TABLE companies ADD COLUMN max_applications INTEGER",
+    );
   }
-  const applicationColumns = await database.select<{ name: string }[]>('PRAGMA table_info(applications)')
-  if (!applicationColumns.some(column => column.name === 'result_reason')) {
-    await database.execute('ALTER TABLE applications ADD COLUMN result_reason TEXT')
+  const applicationColumns = await database.select<{ name: string }[]>(
+    "PRAGMA table_info(applications)",
+  );
+  if (!applicationColumns.some((column) => column.name === "result_reason")) {
+    await database.execute(
+      "ALTER TABLE applications ADD COLUMN result_reason TEXT",
+    );
   }
-  if (!applicationColumns.some(column => column.name === 'submitted_at')) {
-    await database.execute('ALTER TABLE applications ADD COLUMN submitted_at TEXT')
-    await database.execute("UPDATE applications SET submitted_at=application_date||' 12:00:00' WHERE application_date IS NOT NULL")
+  if (!applicationColumns.some((column) => column.name === "submitted_at")) {
+    await database.execute(
+      "ALTER TABLE applications ADD COLUMN submitted_at TEXT",
+    );
+    await database.execute(
+      "UPDATE applications SET submitted_at=application_date||' 12:00:00' WHERE application_date IS NOT NULL",
+    );
   }
-  const profileColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(profile_basic)')).map(column => column.name))
-  if (!profileColumns.has('work_status')) await database.execute('ALTER TABLE profile_basic ADD COLUMN work_status TEXT')
-  const certificateColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(certificates)')).map(column => column.name))
-  if (!certificateColumns.has('validity_type')) await database.execute('ALTER TABLE certificates ADD COLUMN validity_type TEXT')
-  if (!certificateColumns.has('valid_from')) await database.execute('ALTER TABLE certificates ADD COLUMN valid_from TEXT')
-  const writtenColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(written_tests)')).map(column => column.name))
-  if (!writtenColumns.has('sequence_no')) await database.execute('ALTER TABLE written_tests ADD COLUMN sequence_no INTEGER NOT NULL DEFAULT 1')
-  if (!writtenColumns.has('time_tbd')) await database.execute('ALTER TABLE written_tests ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0')
-  if (!writtenColumns.has('test_type')) await database.execute('ALTER TABLE written_tests ADD COLUMN test_type TEXT')
-  if (!writtenColumns.has('meeting_url')) await database.execute('ALTER TABLE written_tests ADD COLUMN meeting_url TEXT')
+  const profileColumns = new Set(
+    (
+      await database.select<{ name: string }[]>(
+        "PRAGMA table_info(profile_basic)",
+      )
+    ).map((column) => column.name),
+  );
+  if (!profileColumns.has("work_status"))
+    await database.execute(
+      "ALTER TABLE profile_basic ADD COLUMN work_status TEXT",
+    );
+  await database.execute(
+    "UPDATE education_experiences SET is_current=0 WHERE is_current<>0",
+  );
+  await database.execute(
+    "UPDATE work_experiences SET end_date=NULL WHERE is_current=1 AND end_date IS NOT NULL",
+  );
+  const certificateColumns = new Set(
+    (
+      await database.select<{ name: string }[]>(
+        "PRAGMA table_info(certificates)",
+      )
+    ).map((column) => column.name),
+  );
+  if (!certificateColumns.has("validity_type"))
+    await database.execute(
+      "ALTER TABLE certificates ADD COLUMN validity_type TEXT",
+    );
+  if (!certificateColumns.has("valid_from"))
+    await database.execute(
+      "ALTER TABLE certificates ADD COLUMN valid_from TEXT",
+    );
+  const writtenColumns = new Set(
+    (
+      await database.select<{ name: string }[]>(
+        "PRAGMA table_info(written_tests)",
+      )
+    ).map((column) => column.name),
+  );
+  if (!writtenColumns.has("sequence_no"))
+    await database.execute(
+      "ALTER TABLE written_tests ADD COLUMN sequence_no INTEGER NOT NULL DEFAULT 1",
+    );
+  if (!writtenColumns.has("time_tbd"))
+    await database.execute(
+      "ALTER TABLE written_tests ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0",
+    );
+  if (!writtenColumns.has("test_type"))
+    await database.execute(
+      "ALTER TABLE written_tests ADD COLUMN test_type TEXT",
+    );
+  if (!writtenColumns.has("meeting_url"))
+    await database.execute(
+      "ALTER TABLE written_tests ADD COLUMN meeting_url TEXT",
+    );
   await database.execute(`UPDATE written_tests SET sequence_no=(SELECT COUNT(*) FROM written_tests previous
     WHERE previous.job_id=written_tests.job_id AND (previous.created_at<written_tests.created_at
-      OR (previous.created_at=written_tests.created_at AND previous.id<=written_tests.id)))`)
-  const interviewColumns = new Set((await database.select<{ name: string }[]>('PRAGMA table_info(interviews)')).map(column => column.name))
-  if (!interviewColumns.has('time_tbd')) await database.execute('ALTER TABLE interviews ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0')
-  if (!interviewColumns.has('interview_type')) await database.execute('ALTER TABLE interviews ADD COLUMN interview_type TEXT')
-  if (!interviewColumns.has('meeting_url')) await database.execute('ALTER TABLE interviews ADD COLUMN meeting_url TEXT')
-  if (!interviewColumns.has('interviewer')) await database.execute('ALTER TABLE interviews ADD COLUMN interviewer TEXT')
-  await database.execute("UPDATE written_tests SET status='SCHEDULED' WHERE status='WAITING'")
-  await database.execute("UPDATE interviews SET status='SCHEDULED' WHERE status='WAITING'")
-  await database.execute("UPDATE applications SET stage='PROCESS' WHERE stage IN ('WRITTEN_TEST','INTERVIEW')")
-  await database.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)', [1])
+      OR (previous.created_at=written_tests.created_at AND previous.id<=written_tests.id)))`);
+  const interviewColumns = new Set(
+    (
+      await database.select<{ name: string }[]>("PRAGMA table_info(interviews)")
+    ).map((column) => column.name),
+  );
+  if (!interviewColumns.has("time_tbd"))
+    await database.execute(
+      "ALTER TABLE interviews ADD COLUMN time_tbd INTEGER NOT NULL DEFAULT 0",
+    );
+  if (!interviewColumns.has("interview_type"))
+    await database.execute(
+      "ALTER TABLE interviews ADD COLUMN interview_type TEXT",
+    );
+  if (!interviewColumns.has("meeting_url"))
+    await database.execute(
+      "ALTER TABLE interviews ADD COLUMN meeting_url TEXT",
+    );
+  if (!interviewColumns.has("interviewer"))
+    await database.execute(
+      "ALTER TABLE interviews ADD COLUMN interviewer TEXT",
+    );
+  await database.execute(
+    "UPDATE written_tests SET status='SCHEDULED' WHERE status='WAITING'",
+  );
+  await database.execute(
+    "UPDATE interviews SET status='SCHEDULED' WHERE status='WAITING'",
+  );
+  await database.execute(
+    "UPDATE applications SET stage='PROCESS' WHERE stage IN ('WRITTEN_TEST','INTERVIEW')",
+  );
+  await database.execute(
+    "INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)",
+    [1],
+  );
   for (const [name, color] of [
-    ['重点', '#ef5b5b'],
-    ['冲刺', '#ff9f43'],
-    ['稳妥', '#22b573'],
-    ['保底', '#3b82f6'],
-    ['优先投递', '#8b5cf6'],
+    ["重点", "#ef5b5b"],
+    ["冲刺", "#ff9f43"],
+    ["稳妥", "#22b573"],
+    ["保底", "#3b82f6"],
+    ["优先投递", "#8b5cf6"],
   ]) {
-    await database.execute('INSERT OR IGNORE INTO tags(name, color) VALUES (?, ?)', [name, color])
+    await database.execute(
+      "INSERT OR IGNORE INTO tags(name, color) VALUES (?, ?)",
+      [name, color],
+    );
   }
-  await database.execute("INSERT OR IGNORE INTO settings(setting_key, setting_value) VALUES ('user_name', '用户')")
-  await database.execute("INSERT OR IGNORE INTO settings(setting_key, setting_value) VALUES ('theme', 'light')")
-  initialized = true
+  await database.execute(
+    "INSERT OR IGNORE INTO settings(setting_key, setting_value) VALUES ('user_name', '用户')",
+  );
+  await database.execute(
+    "INSERT OR IGNORE INTO settings(setting_key, setting_value) VALUES ('theme', 'light')",
+  );
+  initialized = true;
 }
 
 export async function getDatabase() {
-  if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中使用数据功能')
-  if (!initialized) await initializeDatabase()
-  return database
+  if (!isTauriRuntime()) throw new Error("请在 Windows 客户端中使用数据功能");
+  if (!initialized) await initializeDatabase();
+  return database;
 }
 
 export async function getPortableDataPaths() {
-  if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中查看数据目录')
-  return invoke<PortableDataPaths>('portable_data_paths')
+  if (!isTauriRuntime()) throw new Error("请在 Windows 客户端中查看数据目录");
+  return invoke<PortableDataPaths>("portable_data_paths");
 }
 
 export async function select<T>(query: string, values: unknown[] = []) {
-  return (await (await getDatabase()).select<T[]>(query, values)) as T[]
+  return (await (await getDatabase()).select<T[]>(query, values)) as T[];
 }
 
 export async function execute(query: string, values: unknown[] = []) {
-  return (await getDatabase()).execute(query, values)
+  return (await getDatabase()).execute(query, values);
 }
 
 export async function transaction(statements: TransactionStatement[]) {
-  if (!isTauriRuntime()) throw new Error('请在 Windows 客户端中使用数据功能')
-  if (!initialized) await initializeDatabase()
-  return invoke<ExecuteResult>('database_transaction', { statements: statements.map(item => ({ query: item.query, values: item.values ?? [] })) })
+  if (!isTauriRuntime()) throw new Error("请在 Windows 客户端中使用数据功能");
+  if (!initialized) await initializeDatabase();
+  return invoke<ExecuteResult>("database_transaction", {
+    statements: statements.map((item) => ({
+      query: item.query,
+      values: item.values ?? [],
+    })),
+  });
 }
