@@ -4,23 +4,44 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import {
   ArrowDown,
   ArrowUp,
+  Aim,
   Briefcase,
+  Calendar,
   Camera,
   ChatDotRound,
+  Clock,
+  Collection,
+  Connection,
+  DataAnalysis,
   Delete,
+  Document,
   Edit,
+  Finished,
+  Flag,
+  Grid,
   Hide,
+  House,
+  Location,
+  MapLocation,
   Medal,
+  Message,
+  Notebook,
+  OfficeBuilding,
   Phone,
   Plus,
+  Postcard,
+  Rank,
   Reading,
   School,
   Star,
   Suitcase,
+  Tickets,
   TrophyBase,
   User,
   UserFilled,
   View,
+  Wallet,
+  Warning,
 } from "@element-plus/icons-vue";
 import AppCard from "../../components/common/AppCard.vue";
 import EmptyState from "../../components/common/EmptyState.vue";
@@ -55,6 +76,12 @@ interface EntityConfig {
   table: ProfileEntityTable;
   primary: string;
   fields: ProfileField[];
+}
+interface DetailGroup {
+  title: string;
+  icon: unknown;
+  keys: string[];
+  tone?: "plain" | "accent" | "success";
 }
 const yesNo = ["是", "否"];
 const ability = ["精通", "熟练", "良好", "一般", "较弱"];
@@ -810,6 +837,356 @@ const entityIcons: Record<string, unknown> = {
   family: UserFilled,
   emergency: Phone,
 };
+const fieldIcons: Record<string, unknown> = {
+  name: User,
+  english_name: Reading,
+  gender: UserFilled,
+  birth_date: Calendar,
+  ethnicity: Flag,
+  political_status: Aim,
+  marital_status: Connection,
+  health_status: Finished,
+  height: Rank,
+  weight: Wallet,
+  current_residence: OfficeBuilding,
+  household_location: House,
+  native_place: MapLocation,
+  student_origin: Location,
+  household_type: Document,
+  mailing_address: Message,
+  phone: Phone,
+  email: Message,
+  work_status: Document,
+  work_start_date: Calendar,
+  current_industry: Collection,
+  specialties: Star,
+  student_leader: School,
+  overseas_work: MapLocation,
+  disciplinary_record: Warning,
+  school_name: School,
+  start_date: Calendar,
+  end_date: Calendar,
+  duration_years: Clock,
+  education_level: School,
+  degree: Medal,
+  degree_detail: Postcard,
+  study_type: Reading,
+  admission_type: UserFilled,
+  college: OfficeBuilding,
+  major: Reading,
+  major_category: Grid,
+  research_direction: Aim,
+  ranking: DataAnalysis,
+  is_top_up_degree: Rank,
+  is_overseas: MapLocation,
+  position: Briefcase,
+  main_courses: Notebook,
+  failed_course_count: Document,
+  remark: Tickets,
+  company_name: OfficeBuilding,
+  company_type: OfficeBuilding,
+  industry: Collection,
+  work_type: Suitcase,
+  position_name: Briefcase,
+  is_current: Clock,
+  region: Location,
+  monthly_salary: Wallet,
+  salary_unit: Wallet,
+  subordinate_count: UserFilled,
+  responsibilities: Tickets,
+  reference_name: User,
+  reference_position: Briefcase,
+  reference_phone: Phone,
+  project_name: Briefcase,
+  role: User,
+  organization: OfficeBuilding,
+  team_size: UserFilled,
+  description: Document,
+  achievements: DataAnalysis,
+  tech_stack: Grid,
+  achievement_name: Document,
+  achievement_type: Collection,
+  author_role: User,
+  venue: Reading,
+  status: Finished,
+  accepted_date: Calendar,
+  published_date: Calendar,
+  research_field: Aim,
+  doi: Connection,
+  certificate_name: Medal,
+  obtained_date: Calendar,
+  level: Rank,
+  score: Postcard,
+  certificate_number: Document,
+  validity_type: Clock,
+  valid_from: Calendar,
+  valid_until: Calendar,
+  language: ChatDotRound,
+  speaking_ability: ChatDotRound,
+  reading_ability: Reading,
+  honor_name: TrophyBase,
+  honor_level: Collection,
+  award_grade: Medal,
+  issuer: OfficeBuilding,
+  relationship: UserFilled,
+};
+const basicGroups = [
+  {
+    title: "个人信息",
+    note: "基础身份信息",
+    icon: User,
+    keys: [
+      "name",
+      "english_name",
+      "gender",
+      "birth_date",
+      "ethnicity",
+      "political_status",
+      "marital_status",
+      "health_status",
+      "height",
+      "weight",
+    ],
+  },
+  {
+    title: "户籍与居住信息",
+    note: "户籍及现居地址",
+    icon: Location,
+    keys: [
+      "household_location",
+      "native_place",
+      "student_origin",
+      "current_residence",
+      "household_type",
+    ],
+  },
+  {
+    title: "联系方式",
+    note: "常用联系方式",
+    icon: Phone,
+    keys: ["phone", "email", "mailing_address"],
+  },
+  {
+    title: "教育与职业信息",
+    note: "求职相关信息",
+    icon: Briefcase,
+    keys: [
+      "current_industry",
+      "work_status",
+      "work_start_date",
+      "student_leader",
+      "overseas_work",
+      "disciplinary_record",
+    ],
+  },
+  {
+    title: "特长爱好",
+    note: "个人标签",
+    icon: Star,
+    keys: ["specialties"],
+  },
+];
+const entityDetailGroups: Record<string, DetailGroup[]> = {
+  education: [
+    {
+      title: "基本信息",
+      icon: School,
+      keys: [
+        "school_name",
+        "start_date",
+        "end_date",
+        "duration_years",
+        "education_level",
+        "degree",
+        "degree_detail",
+        "study_type",
+        "admission_type",
+        "college",
+        "major",
+        "major_category",
+      ],
+    },
+    {
+      title: "学业与研究",
+      icon: DataAnalysis,
+      keys: [
+        "research_direction",
+        "ranking",
+        "is_top_up_degree",
+        "is_overseas",
+      ],
+      tone: "accent",
+    },
+    {
+      title: "课程与其他",
+      icon: Notebook,
+      keys: ["position", "main_courses", "failed_course_count", "remark"],
+    },
+  ],
+  work: [
+    {
+      title: "工作职责",
+      icon: Tickets,
+      keys: ["responsibilities"],
+      tone: "accent",
+    },
+    {
+      title: "基本信息",
+      icon: Suitcase,
+      keys: [
+        "company_name",
+        "company_type",
+        "industry",
+        "work_type",
+        "position_name",
+        "region",
+      ],
+    },
+    {
+      title: "时间与薪资",
+      icon: Calendar,
+      keys: [
+        "start_date",
+        "end_date",
+        "is_current",
+        "monthly_salary",
+        "salary_unit",
+        "subordinate_count",
+      ],
+    },
+    {
+      title: "证明信息",
+      icon: User,
+      keys: ["reference_name", "reference_position", "reference_phone"],
+    },
+    {
+      title: "其他信息",
+      icon: Document,
+      keys: ["is_overseas", "remark"],
+    },
+  ],
+  projects: [
+    {
+      title: "项目信息",
+      icon: Briefcase,
+      keys: [
+        "project_name",
+        "role",
+        "organization",
+        "team_size",
+        "start_date",
+        "end_date",
+        "is_current",
+      ],
+    },
+    {
+      title: "项目职责",
+      icon: Tickets,
+      keys: ["responsibilities"],
+      tone: "accent",
+    },
+    {
+      title: "项目介绍与成果",
+      icon: DataAnalysis,
+      keys: ["description", "achievements"],
+      tone: "success",
+    },
+    {
+      title: "补充信息",
+      icon: Grid,
+      keys: ["tech_stack", "remark"],
+    },
+  ],
+  academic: [
+    {
+      title: "基础信息",
+      icon: Document,
+      keys: ["achievement_name", "achievement_type", "author_role", "venue"],
+    },
+    {
+      title: "时间与状态",
+      icon: Clock,
+      keys: ["status", "accepted_date", "published_date", "doi"],
+    },
+    {
+      title: "研究方向与备注",
+      icon: DataAnalysis,
+      keys: ["research_field", "remark"],
+      tone: "accent",
+    },
+  ],
+  certificates: [
+    {
+      title: "证书详情",
+      icon: Medal,
+      keys: [
+        "certificate_name",
+        "obtained_date",
+        "level",
+        "score",
+        "certificate_number",
+        "validity_type",
+        "valid_from",
+        "valid_until",
+        "remark",
+      ],
+    },
+  ],
+  languages: [
+    {
+      title: "语言能力详情",
+      icon: ChatDotRound,
+      keys: [
+        "language",
+        "level",
+        "score",
+        "speaking_ability",
+        "reading_ability",
+        "remark",
+      ],
+    },
+  ],
+  honors: [
+    {
+      title: "基本信息",
+      icon: TrophyBase,
+      keys: [
+        "honor_name",
+        "obtained_date",
+        "honor_level",
+        "award_grade",
+        "issuer",
+      ],
+    },
+    {
+      title: "其他信息",
+      icon: Document,
+      keys: ["description", "remark"],
+      tone: "accent",
+    },
+  ],
+  family: [
+    {
+      title: "成员信息",
+      icon: UserFilled,
+      keys: [
+        "name",
+        "relationship",
+        "organization",
+        "position",
+        "phone",
+        "remark",
+      ],
+    },
+  ],
+  emergency: [
+    {
+      title: "联系人信息",
+      icon: Phone,
+      keys: ["name", "relationship", "phone", "organization", "remark"],
+    },
+  ],
+};
 const tabs = [
   { key: "basic", label: "基本信息", icon: User },
   ...entities.map((item) => ({
@@ -824,7 +1201,7 @@ const activeTab = ref("basic"),
   loading = ref(false),
   basic = reactive<ProfileBasic>({}),
   rows = reactive<Record<string, ProfileRecord[]>>({}),
-  expanded = ref<number[]>([]),
+  expanded = ref<string[]>([]),
   visiblePhones = ref<string[]>([]);
 const evaluation = ref(""),
   hobbyTags = ref<string[]>([]),
@@ -892,6 +1269,66 @@ function displayValue(field: ProfileField, value: any) {
   return value === null || value === undefined || value === ""
     ? "未填写"
     : String(value);
+}
+function basicField(key: string) {
+  return basicFields.find((field) => field.key === key)!;
+}
+function groupFields(config: EntityConfig, group: DetailGroup) {
+  return group.keys
+    .map((key) => config.fields.find((field) => field.key === key))
+    .filter((field): field is ProfileField => Boolean(field));
+}
+function summaryTags(config: EntityConfig, row: ProfileRecord) {
+  const keysByType: Record<string, string[]> = {
+    education: ["education_level", "study_type", "degree_detail"],
+    work: ["company_type", "work_type", "industry", "region"],
+    projects: ["role", "organization", "team_size"],
+    academic: ["achievement_type", "author_role", "status"],
+    certificates: ["level", "score", "validity_type"],
+    languages: ["level", "score"],
+    honors: ["honor_level", "award_grade"],
+    family: ["relationship"],
+    emergency: ["relationship"],
+  };
+  return (keysByType[config.key] || [])
+    .map((key) => String(row[key] || "").trim())
+    .filter(Boolean);
+}
+function recordDateText(config: EntityConfig, row: ProfileRecord) {
+  const start = String(
+    row.start_date || row.obtained_date || row.accepted_date || "",
+  );
+  const end =
+    config.key !== "education" && row.is_current
+      ? "至今"
+      : String(row.end_date || "");
+  return [start, end].filter(Boolean).join(" ～ ");
+}
+function recordSubtitle(config: EntityConfig, row: ProfileRecord) {
+  const valuesByType: Record<string, unknown[]> = {
+    education: [row.major, row.college],
+    work: [row.position_name, row.region],
+    projects: [row.role, row.organization],
+    academic: [row.venue, row.author_role],
+    certificates: [row.level, row.score],
+    languages: [row.level, row.score],
+    honors: [row.issuer, row.award_grade],
+    family: [row.relationship, row.organization],
+    emergency: [row.relationship, row.phone],
+  };
+  return (valuesByType[config.key] || [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+function detailLines(value: unknown) {
+  return String(value || "")
+    .split(/\n+|(?=\d+[.、]\s*)/)
+    .map((line) => line.replace(/^\d+[.、]\s*/, "").trim())
+    .filter(Boolean);
+}
+function isNarrativeField(key: string) {
+  return ["responsibilities", "description", "achievements"].includes(key);
 }
 function fieldVisible(field: ProfileField, values: Record<string, any>) {
   return (
@@ -1047,10 +1484,17 @@ async function move(
   await moveProfileRecord(config.table, row.id, direction);
   await load();
 }
-function toggleExpanded(id: number) {
-  expanded.value = expanded.value.includes(id)
-    ? expanded.value.filter((item) => item !== id)
-    : [...expanded.value, id];
+function recordKey(table: ProfileEntityTable, id: number) {
+  return `${table}-${id}`;
+}
+function isExpanded(table: ProfileEntityTable, id: number) {
+  return expanded.value.includes(recordKey(table, id));
+}
+function toggleExpanded(table: ProfileEntityTable, id: number) {
+  const key = recordKey(table, id);
+  expanded.value = expanded.value.includes(key)
+    ? expanded.value.filter((item) => item !== key)
+    : [...expanded.value, key];
 }
 function phoneKey(table: ProfileEntityTable, id: number) {
   return `${table}-${id}`;
@@ -1154,44 +1598,76 @@ onMounted(load);
               @error="photoMissing = true"
             /><el-icon v-else><UserFilled /></el-icon>
           </div>
-          <el-button :icon="Camera" link type="primary" @click="changePhoto">{{
-            basic.photo_path ? "更换照片" : "上传照片"
-          }}</el-button
-          ><el-button
+          <el-button
+            class="photo-button"
+            :icon="Camera"
+            type="primary"
+            @click="changePhoto"
+            >{{ basic.photo_path ? "更换照片" : "上传照片" }}</el-button
+          >
+          <div class="profile-identity">
+            <strong>{{ basic.name || "未填写姓名" }}</strong>
+            <span>{{ basic.english_name || "未填写英文名" }}</span>
+            <em>求职中</em>
+          </div>
+          <el-button
             v-if="basic.photo_path"
             :icon="Delete"
             link
             type="danger"
             @click="deletePhoto"
-            >删除</el-button
-          ><small>JPG、JPEG、PNG 或 WEBP</small>
+            >删除照片</el-button
+          ><small>支持 JPG、JPEG、PNG、WEBP</small>
           <small v-if="photoMissing" class="photo-error"
             >原照片文件不存在，请重新上传。</small
           >
         </div>
-        <dl class="info-grid">
-          <template v-for="field in basicFields" :key="field.key"
-            ><div
-              v-if="fieldVisible(field, basic as any)"
-              :class="{
-                wide: field.wide,
-                full:
-                  field.key === 'disciplinary_record' &&
-                  basic.work_status === '已参加工作',
-              }"
-            >
-              <dt>{{ field.label }}</dt>
-              <dd>{{ displayValue(field, (basic as any)[field.key]) }}</dd>
-            </div></template
+        <div class="basic-groups">
+          <section
+            v-for="group in basicGroups"
+            :key="group.title"
+            class="basic-group"
+            :class="`basic-group-${group.keys[0]}`"
           >
-        </dl>
+            <header class="group-heading">
+              <h3>
+                <span class="heading-icon"
+                  ><el-icon><component :is="group.icon" /></el-icon></span
+                >{{ group.title }}
+              </h3>
+              <span>{{ group.note }}</span>
+            </header>
+            <dl class="icon-info-grid">
+              <template v-for="key in group.keys" :key="key">
+                <div
+                  v-if="fieldVisible(basicField(key), basic as any)"
+                  class="info-cell"
+                  :class="{
+                    wide: ['mailing_address', 'specialties'].includes(key),
+                  }"
+                >
+                  <span class="field-icon"
+                    ><el-icon
+                      ><component :is="fieldIcons[key] || Document" /></el-icon
+                  ></span>
+                  <div>
+                    <dt>{{ basicField(key).label }}</dt>
+                    <dd>
+                      {{ displayValue(basicField(key), (basic as any)[key]) }}
+                    </dd>
+                  </div>
+                </div>
+              </template>
+            </dl>
+          </section>
+        </div>
       </div></AppCard
     >
     <AppCard
       v-for="config in entities"
       :id="`profile-section-${config.key}`"
       :key="config.key"
-      class="content-card profile-section"
+      class="content-card entity-section profile-section"
       ><div class="section-head">
         <div>
           <h2 class="section-title">
@@ -1212,47 +1688,40 @@ onMounted(load);
           v-for="(row, index) in rows[config.key]"
           :key="row.id"
           class="record-item"
+          :class="[
+            `record-${config.key}`,
+            { expanded: isExpanded(config.table, row.id) },
+          ]"
         >
           <div class="record-main">
-            <div>
-              <strong>{{ row[config.primary] }}</strong>
-              <p>
-                {{
-                  row.start_date ||
-                  row.obtained_date ||
-                  row.accepted_date ||
-                  ""
-                }}<template
-                  v-if="
-                    row.end_date ||
-                    (config.key !== 'education' && row.is_current)
-                  "
+            <div class="record-identity">
+              <span class="record-hero-icon"
+                ><el-icon><component :is="entityIcons[config.key]" /></el-icon
+              ></span>
+              <div class="record-summary">
+                <h3>{{ row[config.primary] || "未填写" }}</h3>
+                <p v-if="recordDateText(config, row)" class="record-date">
+                  <el-icon><Calendar /></el-icon
+                  >{{ recordDateText(config, row) }}
+                </p>
+                <p v-if="recordSubtitle(config, row)" class="record-subtitle">
+                  {{ recordSubtitle(config, row) }}
+                </p>
+                <div
+                  v-if="summaryTags(config, row).length"
+                  class="summary-tags"
                 >
-                  ～
-                  {{
-                    config.key !== "education" && row.is_current
-                      ? "至今"
-                      : row.end_date
-                  }}</template
-                ><template v-if="row.position_name || row.role || row.major">
-                  · {{ row.position_name || row.role || row.major }}</template
+                  <span v-for="tag in summaryTags(config, row)" :key="tag">{{
+                    tag
+                  }}</span>
+                </div>
+                <p
+                  v-if="config.key === 'projects' && row.description"
+                  class="record-excerpt"
                 >
-              </p>
-              <div v-if="config.key === 'work'" class="work-tags">
-                <span v-if="row.company_type">{{ row.company_type }}</span>
-                <span v-if="row.work_type">{{ row.work_type }}</span>
-                <span v-if="row.industry">{{ row.industry }}</span>
-                <span v-if="row.region">{{ row.region }}</span>
+                  {{ row.description }}
+                </p>
               </div>
-              <p
-                v-if="config.key === 'work' && row.responsibilities"
-                class="work-responsibilities"
-              >
-                {{ row.responsibilities }}
-              </p>
-              <small v-if="config.key === 'projects'">{{
-                row.description || "暂无项目介绍"
-              }}</small>
             </div>
             <div class="record-actions">
               <el-button
@@ -1275,37 +1744,87 @@ onMounted(load);
                 title="删除"
                 @click="remove(config, row)"
               /><el-button
-                link
+                class="expand-button"
+                :icon="isExpanded(config.table, row.id) ? ArrowUp : ArrowDown"
                 type="primary"
-                @click="toggleExpanded(row.id)"
+                @click="toggleExpanded(config.table, row.id)"
                 >{{
-                  expanded.includes(row.id) ? "收起详情" : "展开详情"
+                  isExpanded(config.table, row.id) ? "收起详情" : "展开详情"
                 }}</el-button
               >
             </div>
           </div>
-          <dl v-show="expanded.includes(row.id)" class="detail-grid">
-            <div
-              v-for="field in config.fields"
-              :key="field.key"
-              :class="{ wide: field.wide }"
+          <div v-show="isExpanded(config.table, row.id)" class="record-details">
+            <section
+              v-for="group in entityDetailGroups[config.key]"
+              :key="group.title"
+              class="detail-section"
+              :class="[`tone-${group.tone || 'plain'}`]"
             >
-              <dt>{{ field.label }}</dt>
-              <dd v-if="['phone', 'reference_phone'].includes(field.key)">
-                <span>{{
-                  phoneVisible(config.table, row.id)
-                    ? displayValue(field, row[field.key])
-                    : maskPhone(row[field.key])
-                }}</span
-                ><el-button
-                  :icon="phoneVisible(config.table, row.id) ? Hide : View"
-                  link
-                  @click="togglePhone(config.table, row.id)"
-                />
-              </dd>
-              <dd v-else>{{ displayValue(field, row[field.key]) }}</dd>
-            </div>
-          </dl>
+              <h4>
+                <span class="heading-icon"
+                  ><el-icon><component :is="group.icon" /></el-icon></span
+                >{{ group.title }}
+              </h4>
+              <dl class="detail-grid">
+                <template
+                  v-for="field in groupFields(config, group)"
+                  :key="field.key"
+                >
+                  <div
+                    v-if="fieldVisible(field, row)"
+                    class="detail-cell"
+                    :class="{
+                      wide: field.wide || isNarrativeField(field.key),
+                      narrative: isNarrativeField(field.key),
+                    }"
+                  >
+                    <span class="field-icon"
+                      ><el-icon
+                        ><component
+                          :is="fieldIcons[field.key] || Document" /></el-icon
+                    ></span>
+                    <div>
+                      <dt>{{ field.label }}</dt>
+                      <dd
+                        v-if="['phone', 'reference_phone'].includes(field.key)"
+                      >
+                        <span>{{
+                          phoneVisible(config.table, row.id)
+                            ? displayValue(field, row[field.key])
+                            : maskPhone(row[field.key])
+                        }}</span
+                        ><el-button
+                          :icon="
+                            phoneVisible(config.table, row.id) ? Hide : View
+                          "
+                          link
+                          @click="togglePhone(config.table, row.id)"
+                        />
+                      </dd>
+                      <dd
+                        v-else-if="
+                          field.key === 'responsibilities' &&
+                          detailLines(row[field.key]).length
+                        "
+                        class="numbered-detail"
+                      >
+                        <span
+                          v-for="(line, lineIndex) in detailLines(
+                            row[field.key],
+                          )"
+                          :key="`${field.key}-${lineIndex}`"
+                          ><em>{{ lineIndex + 1 }}</em
+                          >{{ line }}</span
+                        >
+                      </dd>
+                      <dd v-else>{{ displayValue(field, row[field.key]) }}</dd>
+                    </div>
+                  </div>
+                </template>
+              </dl>
+            </section>
+          </div>
         </article>
       </div>
       <EmptyState
@@ -1319,7 +1838,7 @@ onMounted(load);
     >
     <AppCard
       id="profile-section-evaluation"
-      class="content-card profile-section"
+      class="content-card text-profile-card profile-section"
       ><div class="section-head">
         <div>
           <h2 class="section-title">
@@ -1336,10 +1855,14 @@ onMounted(load);
         placeholder="填写自我评价"
       />
       <div class="save-row">
-        <el-button type="primary" @click="saveText">保存</el-button>
+        <el-button :icon="Finished" type="primary" @click="saveText"
+          >保存</el-button
+        >
       </div></AppCard
     >
-    <AppCard id="profile-section-hobbies" class="content-card profile-section"
+    <AppCard
+      id="profile-section-hobbies"
+      class="content-card text-profile-card profile-section"
       ><div class="section-head">
         <div>
           <h2 class="section-title">
@@ -1369,7 +1892,9 @@ onMounted(load);
         placeholder="补充说明"
       />
       <div class="save-row">
-        <el-button type="primary" @click="saveHobbyData">保存</el-button>
+        <el-button :icon="Finished" type="primary" @click="saveHobbyData"
+          >保存</el-button
+        >
       </div></AppCard
     >
     <el-drawer
@@ -1548,24 +2073,31 @@ onMounted(load);
 }
 .basic-layout {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 205px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 20px;
 }
 .photo-panel {
   display: flex;
   align-items: center;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
+  min-width: 0;
+  padding: 22px 16px;
+  border: 1px solid #e5e2fb;
+  border-radius: 8px;
+  background: #f8f7ff;
 }
 .photo-frame {
   display: grid;
-  width: 112px;
+  width: 148px;
   aspect-ratio: 3/4;
   place-items: center;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 3px solid #fff;
   border-radius: 8px;
-  background: #f7f5ff;
+  background: #f1effd;
+  box-shadow: 0 4px 16px rgba(79, 70, 170, 0.12);
 }
 .photo-frame img {
   width: 100%;
@@ -1573,106 +2105,231 @@ onMounted(load);
   object-fit: cover;
 }
 .photo-frame .el-icon {
-  color: #8b7cf6;
+  color: #7564e8;
   font-size: 42px;
+}
+.photo-button {
+  margin-top: -26px;
+  border: 0;
+  background: #6254d9;
+}
+.profile-identity {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  margin-top: 6px;
+}
+.profile-identity strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+.profile-identity span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.profile-identity em {
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #159a78;
+  background: #e4f7f1;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
 }
 .photo-panel small {
   color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
 }
 .photo-panel .photo-error {
-  max-width: 142px;
+  max-width: 170px;
   color: var(--danger);
   line-height: 1.45;
   text-align: center;
 }
-.info-grid,
+.basic-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 14px;
+}
+.basic-group {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #ebe9f8;
+  border-radius: 8px;
+  background: #fff;
+}
+.basic-group-name,
+.basic-group-household_location,
+.basic-group-specialties {
+  grid-column: 1 / -1;
+}
+.group-heading {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f8f7ff;
+}
+.group-heading h3,
+.detail-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+.group-heading > span {
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #7768d8;
+  background: #efedff;
+  font-size: 12px;
+}
+.heading-icon,
+.field-icon,
+.record-hero-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #6857df;
+  background: #f0edff;
+}
+.heading-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 16px;
+}
+.icon-info-grid,
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0 22px;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 0 14px;
   margin: 0;
+  padding: 4px 12px 8px;
 }
-.info-grid div,
-.detail-grid div {
+.info-cell,
+.detail-cell {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
-  padding: 12px 0;
+  padding: 10px 0;
   border-bottom: 1px solid #f0f1f5;
 }
-.info-grid .wide,
+.icon-info-grid .wide,
 .detail-grid .wide {
   grid-column: span 2;
 }
-.info-grid .full {
-  grid-column: 1 / -1;
+.field-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 18px;
 }
-.info-grid dt,
+.info-cell > div,
+.detail-cell > div {
+  min-width: 0;
+  flex: 1;
+}
+.icon-info-grid dt,
 .detail-grid dt {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--text-tertiary);
   font-size: 12px;
 }
-.info-grid dd,
+.icon-info-grid dd,
 .detail-grid dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--text-primary);
   line-height: 1.65;
+  white-space: pre-line;
 }
 .record-list {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 .record-item {
-  border: 1px solid var(--border-color);
+  overflow: hidden;
+  border: 1px solid #e8e5f8;
   border-radius: 8px;
   background: var(--bg-card);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.record-item.expanded {
+  border-color: #d9d3fb;
+  box-shadow: 0 7px 20px rgba(81, 70, 165, 0.08);
 }
 .record-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
+  min-height: 98px;
   padding: 16px 18px;
+  background: #fdfdff;
 }
-.record-main > div:first-child {
+.record-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
-.record-main strong {
+.record-hero-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  font-size: 27px;
+}
+.record-summary {
+  min-width: 0;
+}
+.record-summary h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
   font-size: 15px;
 }
-.record-main p {
-  margin: 6px 0 0;
+.record-date,
+.record-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 5px 0 0;
   color: var(--text-secondary);
   font-size: 13px;
 }
-.work-tags {
+.summary-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
-.work-tags span {
-  border-radius: 6px;
+.summary-tags span {
+  border-radius: 999px;
   padding: 4px 8px;
-  color: #4166c5;
-  background: #eef3ff;
+  color: #6857df;
+  background: #f0edff;
   font-size: 12px;
 }
-.record-main .work-responsibilities {
-  max-width: 900px;
-  margin-top: 12px;
-  color: var(--text-primary);
-  line-height: 1.75;
-  white-space: pre-line;
-}
-.record-main small {
+.record-excerpt {
   display: -webkit-box;
-  max-width: 680px;
-  margin-top: 7px;
+  max-width: 820px;
+  margin: 8px 0 0;
   overflow: hidden;
   color: var(--text-secondary);
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.6;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1681,20 +2338,95 @@ onMounted(load);
   flex: none;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 .record-actions .el-button + .el-button {
   margin-left: 0;
 }
-.detail-grid {
-  border-top: 1px solid var(--border-color);
-  padding: 6px 18px 18px;
-  background: #fafbfe;
+.record-actions :deep(.el-button:not(.expand-button)) {
+  width: 34px;
+  height: 34px;
+  padding: 0;
 }
-.detail-grid dd {
-  white-space: pre-line;
+.record-actions .expand-button {
+  min-width: 104px;
+  border-color: #6c5ce7;
+  background: #6c5ce7;
+}
+.record-details {
+  border-top: 1px solid var(--border-color);
+  padding: 18px;
+  background: #fff;
+}
+.detail-section + .detail-section {
+  margin-top: 18px;
+}
+.detail-section h4 {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebe9f8;
+}
+.detail-section .detail-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0;
+}
+.detail-section.tone-accent .detail-grid,
+.detail-section.tone-success .detail-grid {
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: #f8f7ff;
+}
+.detail-section.tone-success .detail-grid {
+  background: #f0faf6;
+}
+.detail-section.tone-success .field-icon {
+  color: #14966f;
+  background: #def5ec;
+}
+.detail-cell.narrative {
+  grid-column: 1 / -1;
+  align-items: flex-start;
+}
+.numbered-detail {
+  display: grid;
+  gap: 7px;
+}
+.numbered-detail > span {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.numbered-detail em {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border-radius: 50%;
+  color: #6254d9;
+  background: #e9e5ff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
 }
 .detail-grid dd .el-button {
   margin-left: 5px;
+}
+.text-profile-card .section-head {
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #f8f7ff;
+}
+.text-profile-card .section-title .el-icon {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  background: #ebe7ff;
+}
+.text-profile-card :deep(.el-textarea__inner) {
+  line-height: 1.75;
 }
 .save-row {
   display: flex;
@@ -1719,17 +2451,24 @@ onMounted(load);
   width: 100%;
 }
 @media (max-width: 1200px) {
-  .info-grid,
-  .detail-grid {
+  .detail-section .detail-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .basic-layout {
+    grid-template-columns: 180px minmax(0, 1fr);
   }
 }
 @media (max-width: 800px) {
   .basic-layout {
     grid-template-columns: 1fr;
   }
-  .info-grid,
-  .detail-grid {
+  .basic-groups {
+    grid-template-columns: 1fr;
+  }
+  .basic-group {
+    grid-column: auto;
+  }
+  .detail-section .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .record-main {
@@ -1743,6 +2482,16 @@ onMounted(load);
     grid-template-columns: 1fr;
   }
   .form-grid .wide {
+    grid-column: auto;
+  }
+}
+@media (max-width: 560px) {
+  .icon-info-grid,
+  .detail-section .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .icon-info-grid .wide,
+  .detail-grid .wide {
     grid-column: auto;
   }
 }

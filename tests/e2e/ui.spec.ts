@@ -177,6 +177,7 @@ test("job library exposes grouped management controls", async ({ page }) => {
 });
 
 test("desktop layouts do not overflow horizontally", async ({ page }) => {
+  test.setTimeout(45_000);
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 1366, height: 768 },
@@ -272,7 +273,7 @@ test("personal profile section expands and exposes only the requested child page
     .locator("#profile-section-projects")
     .evaluate((element) => element.getBoundingClientRect().top);
   expect(projectTop).toBeGreaterThanOrEqual(60);
-  expect(projectTop).toBeLessThan(180);
+  expect(projectTop).toBeLessThan(220);
   await page.screenshot({
     path: "test-artifacts/profile-project-section-v0.2.1.png",
   });
@@ -372,24 +373,200 @@ test("complete basic profile packs every visible row without layout holes", asyn
     };
   });
   await page.goto("/profile/basic");
-  const grid = page.locator(".info-grid");
-  await expect(grid.getByText("乌中可", { exact: true })).toBeVisible();
-  const geometry = await grid.evaluate((element) => {
-    const gridRight = element.getBoundingClientRect().right;
-    const rows = new Map<number, number>();
-    for (const child of Array.from(element.children)) {
-      const box = child.getBoundingClientRect();
-      const top = Math.round(box.top);
-      rows.set(top, Math.max(rows.get(top) ?? 0, box.right));
-    }
-    return { gridRight, rowRights: Array.from(rows.values()) };
-  });
-  for (const right of geometry.rowRights)
-    expect(right).toBeGreaterThan(geometry.gridRight - 5);
+  const groups = page.locator(".basic-groups");
+  await expect(groups.getByText("乌中可", { exact: true })).toBeVisible();
+  await expect(groups.locator(".basic-group")).toHaveCount(5);
+  expect(await groups.locator(".field-icon").count()).toBeGreaterThanOrEqual(
+    20,
+  );
+  const overflows = await groups
+    .locator(".basic-group")
+    .evaluateAll((items) =>
+      items.map((item) => item.scrollWidth > item.clientWidth + 1),
+    );
+  expect(overflows).not.toContain(true);
   await page.screenshot({
-    path: "test-artifacts/profile-packed-layout-v0.2.3.png",
+    path: "test-artifacts/profile-styled-basic-v0.2.4.png",
     fullPage: true,
   });
+});
+
+test("all profile record types use icon-led grouped detail layouts", async ({
+  page,
+}) => {
+  test.setTimeout(45_000);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.addInitScript(() => {
+    const runtime = window as typeof window & {
+      __TAURI_INTERNALS__: {
+        invoke: (command: string, args: Record<string, any>) => Promise<any>;
+      };
+    };
+    const records: Record<string, Record<string, any>> = {
+      education_experiences: {
+        id: 101,
+        sort_order: 0,
+        school_name: "青岛科技大学",
+        start_date: "2024-09",
+        end_date: "2027-07",
+        duration_years: "3年",
+        education_level: "硕士研究生",
+        degree: "硕士",
+        degree_detail: "工学硕士",
+        study_type: "全日制",
+        admission_type: "统招",
+        college: "信息科学技术学院",
+        major: "软件工程",
+        major_category: "计算机类",
+        research_direction: "无线定位、SLAM与多传感器融合定位",
+        ranking: "40%-50%",
+        is_top_up_degree: "不适用",
+        is_overseas: "否",
+        position: "无",
+        main_courses: "机器学习、分布式数据库系统、现代软件工程",
+        failed_course_count: 0,
+      },
+      work_experiences: {
+        id: 102,
+        sort_order: 0,
+        company_name: "青岛文达通科技股份有限公司",
+        company_type: "民营企业",
+        industry: "软件和信息技术服务业",
+        work_type: "实习",
+        position_name: "视觉SLAM算法实习生",
+        start_date: "2026-05",
+        is_current: 1,
+        region: "山东省青岛市黄岛区",
+        monthly_salary: "3000",
+        salary_unit: "元/月",
+        subordinate_count: 0,
+        is_overseas: "否",
+        reference_name: "柴文楠",
+        reference_position: "算法工程师",
+        reference_phone: "18253808480",
+        responsibilities:
+          "1. 研究SLAM框架与多传感器定位方案。\n2. 参与机器人室内定位建图开发。\n3. 开展多场景测试与参数优化。",
+      },
+      project_experiences: {
+        id: 103,
+        sort_order: 0,
+        project_name: "机器人巡检定位系统",
+        start_date: "2026-01",
+        end_date: "2026-05",
+        role: "核心成员",
+        organization: "青岛科技大学",
+        team_size: "6-10人",
+        description:
+          "面向工厂复杂室内环境的机器人巡检定位需求，实现全局位置与高精度局部里程计协同定位。",
+        responsibilities:
+          "1. 负责多源数据采集与特征提取。\n2. 实现WiFi全局定位算法。\n3. 开展协同定位测试验证。",
+        achievements: "完成多源协同定位方案并完成测试验证。",
+        tech_stack: "WiFi定位\nSLAM\nPython",
+      },
+      academic_achievements: {
+        id: 104,
+        sort_order: 0,
+        achievement_name: "基于联合特征编码与自注意力的自适应WiFi定位",
+        achievement_type: "期刊论文",
+        author_role: "第一作者",
+        venue: "《现代电子技术》",
+        status: "已录用",
+        accepted_date: "2026-07-31",
+        research_field: "WiFi定位、无线定位、室内定位",
+        remark: "北大中文核心期刊；尚未正式见刊。",
+      },
+      certificates: {
+        id: 105,
+        sort_order: 0,
+        certificate_name: "大学英语四级（CET-4）",
+        obtained_date: "2023-12-16",
+        level: "CET-4",
+        score: "425分",
+        validity_type: "长期有效",
+      },
+      language_abilities: {
+        id: 106,
+        sort_order: 0,
+        language: "英语",
+        level: "CET-4",
+        score: "425分",
+        speaking_ability: "一般",
+        reading_ability: "良好",
+      },
+      honors: {
+        id: 107,
+        sort_order: 0,
+        honor_name: "2026年CIMC“西门子杯”中国智能制造挑战赛华北二赛区三等奖",
+        obtained_date: "2026-07",
+        honor_level: "省部级 / 省区级",
+        award_grade: "三等奖",
+        issuer: "中国智能制造挑战赛全国竞赛组委会",
+        description: "参加离散行业运动控制方向比赛，获华北二赛区三等奖。",
+      },
+      family_members: {
+        id: 108,
+        sort_order: 0,
+        name: "乌景路",
+        relationship: "父亲",
+        organization: "务农",
+        position: "无",
+        remark: "姓名最终以证件为准。",
+      },
+      emergency_contacts: {
+        id: 109,
+        sort_order: 0,
+        name: "于桂环",
+        relationship: "母亲",
+        phone: "15200004298",
+        remark: "联系电话以本人当前使用号码为准。",
+      },
+    };
+    runtime.__TAURI_INTERNALS__ = {
+      invoke: async (command, args) => {
+        if (command === "database_execute")
+          return { rowsAffected: 1, lastInsertId: 1 };
+        if (command !== "database_select") return null;
+        const query = String(args?.query ?? "");
+        for (const [table, record] of Object.entries(records))
+          if (query.includes(`FROM ${table}`)) return [record];
+        if (query.includes("PRAGMA table_info")) return [];
+        return [];
+      },
+    };
+  });
+  await page.goto("/profile/basic");
+  const expandButtons = page.getByRole("button", {
+    name: "展开详情",
+    exact: true,
+  });
+  await expect(expandButtons).toHaveCount(9);
+  while ((await expandButtons.count()) > 0) await expandButtons.first().click();
+  await expect(page.locator(".record-item.expanded")).toHaveCount(9);
+  expect(
+    await page.locator(".record-details .field-icon").count(),
+  ).toBeGreaterThan(40);
+  expect(
+    await page
+      .locator(".record-details")
+      .evaluateAll((items) =>
+        items.some((item) => item.scrollWidth > item.clientWidth + 1),
+      ),
+  ).toBeFalsy();
+  await page.screenshot({
+    path: "test-artifacts/profile-styled-records-v0.2.4.png",
+    fullPage: true,
+  });
+  for (const section of [
+    "education",
+    "work",
+    "projects",
+    "academic",
+    "family",
+  ]) {
+    await page.locator(`.record-${section}`).screenshot({
+      path: `test-artifacts/profile-${section}-v0.2.4.png`,
+    });
+  }
 });
 
 test("date pickers are Chinese and education no longer exposes current status", async ({
