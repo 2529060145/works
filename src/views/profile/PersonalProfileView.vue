@@ -1323,7 +1323,8 @@ function recordSubtitle(config: EntityConfig, row: ProfileRecord) {
 }
 function detailLines(value: unknown) {
   return String(value || "")
-    .split(/\n+|(?=\d+[.、]\s*)/)
+    .replace(/([。！？；;])\s*(?=\d+[.、]\s*)/g, "$1\n")
+    .split(/\n+/)
     .map((line) => line.replace(/^\d+[.、]\s*/, "").trim())
     .filter(Boolean);
 }

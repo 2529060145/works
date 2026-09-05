@@ -139,7 +139,7 @@ function toggleProfile() {
           ><component :is="appStore.sidebarCollapsed ? Expand : Fold"
         /></el-icon>
       </button>
-      <span v-if="!appStore.sidebarCollapsed">v0.2.4</span>
+      <span v-if="!appStore.sidebarCollapsed">v0.2.5</span>
     </div>
   </aside>
 </template>

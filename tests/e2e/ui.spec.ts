@@ -445,7 +445,7 @@ test("all profile record types use icon-led grouped detail layouts", async ({
         reference_position: "算法工程师",
         reference_phone: "18253808480",
         responsibilities:
-          "1. 研究SLAM框架与多传感器定位方案。\n2. 参与机器人室内定位建图开发。\n3. 开展多场景测试与参数优化。",
+          "1. 研究ORB-SLAM3、VINS-Fusion及Cartographer等SLAM框架，分析多传感器定位与建图方案。\n2. 基于单线激光雷达、IMU及里程计运行Cartographer，参与机器人室内定位建图开发。\n3. 使用Cartographer位姿参与ORB-SLAM3地图构建，优化特征提取及定位结果融合。\n4. 开展多场景测试，分析轨迹漂移和定位稳定性，并进行参数调整与算法优化。",
       },
       project_experiences: {
         id: 103,
@@ -552,6 +552,13 @@ test("all profile record types use icon-led grouped detail layouts", async ({
         items.some((item) => item.scrollWidth > item.clientWidth + 1),
       ),
   ).toBeFalsy();
+  const workResponsibilities = page.locator(
+    ".record-work .numbered-detail > span",
+  );
+  await expect(workResponsibilities).toHaveCount(4);
+  await expect(workResponsibilities.first()).toContainText(
+    "ORB-SLAM3、VINS-Fusion",
+  );
   await page.screenshot({
     path: "test-artifacts/profile-styled-records-v0.2.4.png",
     fullPage: true,
